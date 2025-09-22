@@ -1,0 +1,32 @@
+{
+    "common": {
+        "editor": {
+            "heading1": "Encabezado 1",
+            "heading2": "Encabezado 2",
+            "heading3": "Encabezado 3",
+            "heading4": "Encabezado 4",
+            "heading5": "Encabezado 5",
+            "heading6": "Encabezado 6"
+        },
+        "app_name": "Inventoria - Sistema de Inventario",
+        "noscript_message": "Necesitas habilitar JavaScript para que funcione la app.",
+        "okText": "Confirmar",
+        "closeText": "Cerrar",
+        "cancelText": "Cancelar",
+        "loadingText": "Cargando...",
+        "saveText": "Guardar",
+        "delText": "Eliminar",
+        "resetText": "Restablecer",
+        "searchText": "Buscar",
+        "queryText": "Buscar",
+
+        "inputText": "Por favor ingrese",
+        "chooseText": "Por favor elija",
+
+        "redo": "Refrescar",
+        "back": "Regresar",
+
+        "light": "Claro",
+        "dark": "Oscuro"
+    }
+}

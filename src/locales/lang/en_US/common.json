@@ -1,0 +1,32 @@
+{
+    "common": {
+        "editor": {
+            "heading1": "Heading 1",
+            "heading2": "Heading 2",
+            "heading3": "Heading 3",
+            "heading4": "Heading 4",
+            "heading5": "Heading 5",
+            "heading6": "Heading 6"
+        },
+        "app_name": "Inventoria - Inventory System",
+        "noscript_message": "You need to enable JavaScript for the app to work.",
+        "okText": "OK",
+        "closeText": "Close",
+        "cancelText": "Cancel",
+        "loadingText": "Loading...",
+        "saveText": "Save",
+        "delText": "Delete",
+        "resetText": "Reset",
+        "searchText": "Search",
+        "queryText": "Search",
+
+        "inputText": "Please enter",
+        "chooseText": "Please choose",
+
+        "redo": "Refresh",
+        "back": "Back",
+
+        "light": "Light",
+        "dark": "Dark"
+    }
+}
