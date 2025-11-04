@@ -46,7 +46,7 @@ export default defineConfig(({ mode }) => {
 		build: {
 			target: "esnext",
 			minify: "esbuild",
-			sourcemap: !isProduction,
+			sourcemap: false, // Deshabilitado temporalmente para resolver el error
 			cssCodeSplit: true,
 			chunkSizeWarningLimit: 1500,
 			rollupOptions: {

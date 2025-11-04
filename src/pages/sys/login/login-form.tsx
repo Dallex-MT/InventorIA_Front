@@ -1,18 +1,15 @@
-import { DB_USER } from "@/_mock/assets_backup";
 import type { SignInReq } from "@/api/services/userService";
-import { Icon } from "@/components/icon";
 import { useSignIn } from "@/store/userStore";
 import { Button } from "@/ui/button";
-import { Checkbox } from "@/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { cn } from "@/utils";
-import { Loader2 } from "lucide-react";
+import { encryptPasswordHMAC } from "@/utils/crypto-utils";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
 import { LoginStateEnum, useLoginStateContext } from "./providers/login-provider";
 
 const { VITE_APP_HOMEPAGE: HOMEPAGE } = import.meta.env;
@@ -20,6 +17,7 @@ const { VITE_APP_HOMEPAGE: HOMEPAGE } = import.meta.env;
 export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRef<"form">) {
 	const { t } = useTranslation();
 	const [loading, setLoading] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
 	const navigatge = useNavigate();
 
 	const { loginState, setLoginState } = useLoginStateContext();
@@ -27,8 +25,8 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
 	const form = useForm<SignInReq>({
 		defaultValues: {
-			username: DB_USER[2].username,
-			password: DB_USER[2].password,
+			correo: "",
+			password: "",
 		},
 	});
 
@@ -37,11 +35,10 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 	const handleFinish = async (values: SignInReq) => {
 		setLoading(true);
 		try {
-			await signIn(values);
+			const hashedPassword = encryptPasswordHMAC(values.password);
+			await signIn({ ...values, password: hashedPassword });
 			navigatge(HOMEPAGE, { replace: true });
-			toast.success(t("sys.login.signInSuccess"), {
-				closeButton: true,
-			});
+		} catch (err: any) {
 		} finally {
 			setLoading(false);
 		}
@@ -58,13 +55,13 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 
 					<FormField
 						control={form.control}
-						name="username"
+						name="correo"
 						rules={{ required: t("sys.login.accountPlaceholder") }}
 						render={({ field }) => (
 							<FormItem>
 								<FormLabel>{t("sys.login.userName")}</FormLabel>
 								<FormControl>
-									<Input placeholder={DB_USER.map((user) => user.username).join("/")} {...field} />
+									<Input placeholder="usuario@ejemplo.com" {...field} />
 								</FormControl>
 								<FormMessage />
 							</FormItem>
@@ -79,18 +76,23 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 							<FormItem>
 								<FormLabel>{t("sys.login.password")}</FormLabel>
 								<FormControl>
-									<Input type="password" placeholder={DB_USER[0].password} {...field} suppressHydrationWarning />
+									<div className="relative">
+										<Input type={showPassword ? "text" : "password"} placeholder="••••••••" className="pr-10" {...field} />
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+											onClick={() => setShowPassword(!showPassword)}
+										>
+											{showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+										</Button>
+									</div>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}
 					/>
-
-					<div className="flex flex-row justify-center">
-						<Button variant="link" onClick={() => setLoginState(LoginStateEnum.RESET_PASSWORD)} size="sm">
-							{t("sys.login.forgetPassword")}
-						</Button>
-					</div>
 
 					<Button type="submit" className="w-full">
 						{loading && <Loader2 className="animate-spin mr-2" />}
@@ -98,6 +100,11 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					</Button>
 				</form>
 			</Form>
+			<div className="flex flex-row justify-center">
+				<Button variant="link" onClick={() => setLoginState(LoginStateEnum.RESET_PASSWORD)} size="sm">
+					{t("sys.login.forgetPassword")}
+				</Button>
+			</div>
 		</div>
 	);
 }

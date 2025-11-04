@@ -4,13 +4,10 @@ import { Icon } from "@/components/icon";
 import { type SettingsType, useSettingActions, useSettings } from "@/store/settingStore";
 import { themeVars } from "@/theme/theme.css";
 import { presetsColors } from "@/theme/tokens/color";
-import { FontFamilyPreset } from "@/theme/tokens/typography";
 import { Button } from "@/ui/button";
 import { Card } from "@/ui/card";
 import { ScrollArea } from "@/ui/scroll-area";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/ui/sheet";
-import { Slider } from "@/ui/slider";
-import { Switch } from "@/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/ui/tooltip";
 import { cn } from "@/utils";
 import { type CSSProperties, useState } from "react";
@@ -21,7 +18,7 @@ import { type ThemeColorPresets, ThemeLayout, ThemeMode } from "#/enum";
 export default function SettingButton() {
 	const { t } = useTranslation();
 	const settings = useSettings();
-	const { themeMode, themeColorPresets, themeLayout, themeStretch, breadCrumb, fontSize, fontFamily } = settings;
+	const { themeMode, themeColorPresets, themeLayout, themeStretch } = settings;
 	const { setSettings } = useSettingActions();
 
 	const updateSettings = (partialSettings: Partial<SettingsType>) => {

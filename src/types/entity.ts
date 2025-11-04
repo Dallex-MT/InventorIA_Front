@@ -1,20 +1,15 @@
 import type { BasicStatus, PermissionType } from "./enum";
 
-export interface UserToken {
-	accessToken?: string;
-	refreshToken?: string;
-}
-
+// Nuevo esquema de usuario proveniente del backend
 export interface UserInfo {
-	id: string;
-	email: string;
-	username: string;
-	password?: string;
-	avatar?: string;
-	roles?: Role[];
-	status?: BasicStatus;
-	permissions?: Permission[];
-	menu?: MenuTree[];
+	id: number;
+	cedula: string;
+	nombre_usuario: string;
+	correo: string;
+	rol_id: number;
+	activo: boolean;
+	fecha_creacion?: string;
+	ultima_sesion?: string;
 }
 
 export interface Permission_Old {
@@ -36,13 +31,12 @@ export interface Permission_Old {
 }
 
 export interface Role_Old {
-	id: string;
-	name: string;
-	code: string;
-	status: BasicStatus;
-	order?: number;
-	desc?: string;
-	permission?: Permission_Old[];
+	id: number;
+	nombre: string;
+	descripcion: string;
+	activo: boolean;
+	fecha_creacion: string;
+	fecha_actualizacion: string;
 }
 
 export interface CommonOptions {
@@ -61,9 +55,12 @@ export interface User extends CommonOptions {
 }
 
 export interface Role extends CommonOptions {
-	id: string; // uuid
-	name: string;
-	code: string;
+	id: number;
+	nombre: string;
+	descripcion: string;
+	activo: boolean;
+	fecha_creacion: string;
+	fecha_actualizacion: string;
 }
 
 export interface Permission extends CommonOptions {
@@ -98,3 +95,40 @@ export type MenuMetaInfo = {
 export type MenuTree = Menu & {
 	children?: MenuTree[];
 };
+
+export interface ProductInfo {
+	id: number;
+	nombre: string;
+	descripcion: string;
+	categoria_id: number;
+	unidad_medida: string;
+	stock_actual: number;
+	stock_minimo: number;
+	precio_referencia: number;
+	activo: boolean;
+	fecha_creacion: string;
+	fecha_actualizacion: string;
+}
+
+export interface CategoryInfo {
+	id: number;
+	nombre: string;
+	descripcion: string;
+	activo: boolean;
+	fecha_creacion: string;
+	fecha_actualizacion?: string;
+}
+
+export interface InvoiceInfo {
+	id: number;
+	codigo_interno: string;
+	tipo_movimiento_id: number;
+	concepto: string;
+	usuario_responsable_id: number;
+	fecha_movimiento: string;
+	total: number;
+	observaciones: string;
+	estado: "BORRADOR" | "CONFIRMADA" | "ANULADA";
+	fecha_creacion: string;
+	fecha_actualizacion: string;
+}

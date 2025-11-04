@@ -1,11 +1,10 @@
 import Character3 from "@/assets/images/characters/character_3.png";
-import { Icon } from "@/components/icon";
 import useLocale from "@/locales/use-locale";
 import { useUserInfo } from "@/store/userStore";
 import { themeVars } from "@/theme/theme.css";
 
 export default function BannerCard() {
-	const { username } = useUserInfo();
+	const { nombre_usuario } = useUserInfo();
 	const { t } = useLocale();
 
 	const bg = `linear-gradient(135deg, rgba(${themeVars.colors.palette.primary.lightChannel}/ .2), rgba(${themeVars.colors.palette.primary.defaultChannel}/ .2)) ${themeVars.colors.common.white}`;
@@ -15,7 +14,7 @@ export default function BannerCard() {
 			<div className="flex-1 text-center md:text-left">
 				<div className="mt-4 text-lg font-semibold md:text-xl" style={{ color: themeVars.colors.palette.primary.dark }}>
 					<h4>{t("sys.analysis.hi_welcome_back")}</h4>
-					<h4>{username}</h4>
+					<h4>{nombre_usuario}</h4>
 				</div>
 				<div style={{ color: themeVars.colors.palette.primary.dark }} className="mx-auto mb-6 mt-4 max-w-sm text-sm opacity-80 md:mx-0">
 					{t("sys.analysis.inventory")}

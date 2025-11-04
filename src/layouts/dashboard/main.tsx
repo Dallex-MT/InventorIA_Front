@@ -9,7 +9,6 @@ import { flattenTrees } from "@/utils/tree";
 import { clone, concat } from "ramda";
 import { Suspense } from "react";
 import { Outlet, useLocation } from "react-router";
-import { backendNavData } from "./nav/nav-data/nav-data-backend";
 import { frontendNavData } from "./nav/nav-data/nav-data-frontend";
 
 const { VITE_APP_ROUTER_MODE: ROUTER_MODE } = import.meta.env;
@@ -24,7 +23,7 @@ function findAuthByPath(path: string): string[] {
 	return foundItem?.auth || [];
 }
 
-const navData = ROUTER_MODE === "frontend" ? clone(frontendNavData) : backendNavData;
+const navData = ROUTER_MODE === "frontend" ? clone(frontendNavData) : frontendNavData;
 const allItems = navData.reduce((acc: any[], group) => {
 	const flattenedItems = flattenTrees(group.items);
 	return concat(acc, flattenedItems);

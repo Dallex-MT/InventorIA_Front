@@ -28,15 +28,11 @@ export const frontendNavData: NavProps["data"] = [
 				icon: <Icon icon="local:ic-management" size="24" />,
 				children: [
 					{
-						title: "sys.nav.system.permission",
-						path: "/management/system/permission",
-					},
-					{
-						title: "sys.nav.system.role",
+						title: "sys.nav.system.role.index",
 						path: "/management/system/role",
 					},
 					{
-						title: "sys.nav.system.user",
+						title: "sys.nav.user.index",
 						path: "/management/system/user",
 					},
 				],
@@ -44,23 +40,37 @@ export const frontendNavData: NavProps["data"] = [
 		],
 	},
 	{
+		name: "sys.nav.inventory.index",
+		items: [
+			{
+				title: "sys.nav.inventory.product.index",
+				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
+				path: "/inventory/product",
+			},
+			{
+				title: "sys.nav.inventory.category.index",
+				icon: <Icon icon="solar:folder-bold-duotone" size="24" />,
+				path: "/inventory/category",
+			},
+			{
+				title: "sys.nav.inventory.invoice.index",
+				icon: <Icon icon="solar:bill-list-bold-duotone" size="24" />,
+				path: "/inventory/invoice",
+			},
+		],
+	},
+	{
 		name: "sys.nav.others",
 		items: [
+			{
+				title: "sys.nav.reports",
+				path: "/reports",
+				icon: <Icon icon="solar:chart-bold-duotone" size="24" />,
+			},
 			{
 				title: "sys.nav.calendar",
 				path: "/calendar",
 				icon: <Icon icon="solar:calendar-bold-duotone" size="24" />,
-				info: (
-					<Badge variant="info">
-						<Icon icon="solar:bell-bing-bold-duotone" size={14} />
-						Preview
-					</Badge>
-				),
-			},
-			{
-				title: "sys.nav.kanban",
-				path: "/kanban",
-				icon: <Icon icon="solar:clipboard-bold-duotone" size="24" />,
 				info: (
 					<Badge variant="info">
 						<Icon icon="solar:bell-bing-bold-duotone" size={14} />

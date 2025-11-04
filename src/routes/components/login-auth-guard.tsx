@@ -1,4 +1,4 @@
-import { useUserToken } from "@/store/userStore";
+import { useUserInfo } from "@/store/userStore";
 import { useCallback, useEffect } from "react";
 import { useRouter } from "../hooks";
 
@@ -7,13 +7,14 @@ type Props = {
 };
 export default function LoginAuthGuard({ children }: Props) {
 	const router = useRouter();
-	const { accessToken } = useUserToken();
+	const user = useUserInfo();
 
 	const check = useCallback(() => {
-		if (!accessToken) {
+		const isLoggedIn = Boolean(user?.id) || Boolean(user?.correo);
+		if (!isLoggedIn) {
 			router.replace("/auth/login");
 		}
-	}, [router, accessToken]);
+	}, [router, user]);
 
 	useEffect(() => {
 		check();

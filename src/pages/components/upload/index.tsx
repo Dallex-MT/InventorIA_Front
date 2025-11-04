@@ -1,5 +1,5 @@
 import { Icon } from "@/components/icon";
-import { Upload, UploadAvatar, UploadBox } from "@/components/upload";
+import { Upload, UploadBox } from "@/components/upload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Switch } from "@/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
@@ -50,21 +50,6 @@ export default function UploadPage() {
 			</Card>
 		</div>
 	);
-	const UploadAvatarTab = (
-		<Card title="Upload Avatar">
-			<CardHeader>
-				<CardTitle>
-					<div className="flex items-center gap-2">
-						<span>Upload Avatar</span>
-						{ThumbnailSwitch}
-					</div>
-				</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<UploadAvatar />
-			</CardContent>
-		</Card>
-	);
 	const UploadBoxTab = (
 		<div className="flex flex-col gap-4">
 			<div className="w-40 h-40">
@@ -80,11 +65,9 @@ export default function UploadPage() {
 		<Tabs defaultValue="upload--file" className="w-full">
 			<TabsList>
 				<TabsTrigger value="upload--file">Upload Single File</TabsTrigger>
-				<TabsTrigger value="upload-avatar">Upload Avatar</TabsTrigger>
 				<TabsTrigger value="upload-box">Upload Box</TabsTrigger>
 			</TabsList>
 			<TabsContent value="upload--file">{UploadFileTab}</TabsContent>
-			<TabsContent value="upload-avatar">{UploadAvatarTab}</TabsContent>
 			<TabsContent value="upload-box">{UploadBoxTab}</TabsContent>
 		</Tabs>
 	);

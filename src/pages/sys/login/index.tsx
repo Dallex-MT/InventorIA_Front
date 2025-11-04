@@ -2,21 +2,18 @@ import LogoBG from "@/assets/images/background/COTA.webp";
 import LocalePicker from "@/components/locale-picker";
 import Logo from "@/components/logo";
 import SettingButton from "@/layouts/components/setting-button";
-import { useUserToken } from "@/store/userStore";
+import { useUserInfo } from "@/store/userStore";
 import { Navigate } from "react-router";
 import LoginForm from "./login-form";
-import MobileForm from "./mobile-form";
 import { LoginProvider } from "./providers/login-provider";
-import QrCodeFrom from "./qrcode-form";
-import RegisterForm from "./register-form";
 import ResetForm from "./reset-form";
 
 const { VITE_APP_HOMEPAGE: HOMEPAGE } = import.meta.env;
 
 function LoginPage() {
-	const token = useUserToken();
+	const user = useUserInfo();
 
-	if (token.accessToken) {
+	if (user.id || user.correo) {
 		return <Navigate to={HOMEPAGE} replace />;
 	}
 
@@ -33,9 +30,6 @@ function LoginPage() {
 					<div className="w-full max-w-xs">
 						<LoginProvider>
 							<LoginForm />
-							<MobileForm />
-							<QrCodeFrom />
-							<RegisterForm />
 							<ResetForm />
 						</LoginProvider>
 					</div>

@@ -27,13 +27,22 @@ export const frontendDashboardRoutes: RouteObject[] = [
 			{
 				path: "system",
 				children: [
-					{ index: true, element: <Navigate to="permission" replace /> },
-					{ path: "permission", element: Component("/pages/management/system/permission") },
+					{ index: true, element: <Navigate to="user" replace /> },
 					{ path: "role", element: Component("/pages/management/system/role") },
 					{ path: "user", element: Component("/pages/management/system/user") },
 					{ path: "user/:id", element: Component("/pages/management/system/user/detail") },
 				],
 			},
+		],
+	},
+	{
+		path: "inventory",
+		children: [
+			{ path: "product", element: Component("/pages/inventory/product") },
+			{ path: "category", element: Component("/pages/inventory/category") },
+			{ path: "invoice", element: Component("/pages/inventory/invoice") },
+			{ path: "invoice/movement_types", element: Component("/pages/inventory/invoice/movement-types") },
+			{ path: "invoice/:id", element: Component("/pages/inventory/invoice/detail") },
 		],
 	},
 	{
@@ -46,5 +55,5 @@ export const frontendDashboardRoutes: RouteObject[] = [
 		],
 	},
 	{ path: "calendar", element: Component("/pages/sys/others/calendar") },
-	{ path: "kanban", element: Component("/pages/sys/others/kanban") },
+	{ path: "reports", element: Component("/pages/sys/others/reports") },
 ];
