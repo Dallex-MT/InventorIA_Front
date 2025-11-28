@@ -131,4 +131,5 @@ export interface InvoiceInfo {
 	estado: "BORRADOR" | "CONFIRMADA" | "ANULADA";
 	fecha_creacion: string;
 	fecha_actualizacion: string;
+	afecta_stock: string;
 }

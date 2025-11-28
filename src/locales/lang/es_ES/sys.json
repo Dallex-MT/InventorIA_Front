@@ -34,7 +34,6 @@
 			"apiRequestFailed": "Error en la solicitud; intente más tarde.",
 			"networkException": "Error de red",
 			"networkExceptionMsg": "Error de red; verifique su conexión.",
-
 			"errMsg400": "Solicitud incorrecta; verifique los datos.",
 			"errMsg401": "Sin permisos (token, usuario o contraseña incorrectos).",
 			"errMsg403": "Usuario autorizado, pero el acceso está prohibido.",
@@ -68,7 +67,7 @@
 			"forgetPassword": "¿Olvidó su contraseña?",
 			"otherSignIn": "Otras formas de ingresar",
 			"sendSmsButton": "Enviar código",
-			"sendSmsText": "Reintente en                                                                             {{ second }}s",
+			"sendSmsText": "Reintente en                                                                                     {{ second }}s",
 			"sendEmailButton": "Enviar correo",
 
 			"loginSuccessTitle": "Ingreso exitoso",
@@ -188,10 +187,12 @@
 					"unit": "Unidad",
 					"status": {
 						"index": "Estado",
+						"all": "Todos",
 						"active": "Activo",
 						"inactive": "Inactivo"
 					},
-					"actions": "Acciones"
+					"actions": "Acciones",
+					"edit": "Editar Producto"
 				},
 				"category": {
 					"index": "Categorías",
@@ -201,14 +202,21 @@
 					"description": "Descripción",
 					"status": {
 						"index": "Estado",
+						"all": "Todos",
 						"active": "Activo",
 						"inactive": "Inactivo"
 					},
 					"created_at": "Fecha de creación",
-					"actions": "Acciones"
+					"actions": "Acciones",
+					"edit": "Editar Categoría",
+					"create": "Crear Categoría",
+					"confirm": "Confirmar",
+					"cancel": "Cancelar"
 				},
 				"invoice": {
 					"index": "Facturas",
+					"new": "Nueva Factura",
+					"edit": "Editar Factura",
 					"detail": {
 						"index": "Detalles de la factura",
 						"product": "Productos",
@@ -218,6 +226,7 @@
 						"subtotal": "Subtotal",
 						"status": {
 							"index": "Estado",
+							"all": "Todos",
 							"confirmada": "Activa",
 							"anulada": "Anulada",
 							"borrador": "Borrador"
@@ -248,6 +257,7 @@
 					"observations": "Observaciones",
 					"status": {
 						"index": "Estado",
+						"all": "Todos",
 						"confirmada": "Activa",
 						"anulada": "Anulada",
 						"borrador": "Borrador"

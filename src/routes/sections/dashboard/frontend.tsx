@@ -4,15 +4,6 @@ import { Component } from "./utils";
 
 export const frontendDashboardRoutes: RouteObject[] = [
 	{ path: "workbench", element: Component("/pages/dashboard/workbench") },
-	{ path: "analysis", element: Component("/pages/dashboard/analysis") },
-	{
-		path: "functions",
-		children: [
-			{ index: true, element: <Navigate to="clipboard" replace /> },
-			{ path: "clipboard", element: Component("/pages/functions/clipboard") },
-			{ path: "token_expired", element: Component("/pages/functions/token-expired") },
-		],
-	},
 	{
 		path: "management",
 		children: [
@@ -41,7 +32,6 @@ export const frontendDashboardRoutes: RouteObject[] = [
 			{ path: "product", element: Component("/pages/inventory/product") },
 			{ path: "category", element: Component("/pages/inventory/category") },
 			{ path: "invoice", element: Component("/pages/inventory/invoice") },
-			{ path: "invoice/movement_types", element: Component("/pages/inventory/invoice/movement-types") },
 			{ path: "invoice/:id", element: Component("/pages/inventory/invoice/detail") },
 		],
 	},

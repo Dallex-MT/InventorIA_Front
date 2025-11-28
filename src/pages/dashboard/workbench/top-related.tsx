@@ -71,11 +71,7 @@ export default function TopRelated() {
 							<div className="flex flex-col">
 								<span className="font-medium">{item.title}</span>
 								<div className="flex items-center justify-center text-gray gap-2">
-									{item.platform === "Mac" ? (
-										<Icon icon="wpf:mac-os" size={12} />
-									) : (
-										<Icon icon="mingcute:windows-fill" size={12} />
-									)}
+									{item.platform === "Mac" ? <Icon icon="wpf:mac-os" size={12} /> : <Icon icon="mingcute:windows-fill" size={12} />}
 									<span className="text-xs font-light">{item.platform}</span>
 									<Badge variant={item.type === "free" ? "success" : "error"}>{item.type}</Badge>
 								</div>

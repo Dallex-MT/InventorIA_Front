@@ -39,6 +39,65 @@ const getCategories = (params?: QueryParams) => {
 	});
 };
 
+export interface UpdateCategoryReq {
+	categoryId: number;
+	nombre: string;
+	descripcion: string;
+	activo: boolean;
+}
+
+export interface UpdateCategoryRes {
+	success: boolean;
+	message: string;
+	data?: {
+		id: number;
+		nombre: string;
+		descripcion: string;
+		activo: number | boolean;
+		fecha_creacion: string;
+	};
+}
+
+const updateCategory = (req: UpdateCategoryReq) => {
+	return apiClient.put<UpdateCategoryRes>({
+		url: `${CategoryApi.Categories}/${req.categoryId}`,
+		data: {
+			nombre: req.nombre,
+			descripcion: req.descripcion,
+			activo: req.activo,
+		},
+	});
+};
+
+// Crear una nueva categoría (POST /categorias)
+export interface CreateCategoryReq {
+	nombre: string;
+	descripcion: string;
+	activo: boolean;
+}
+
+export interface CreateCategoryRes {
+	success: boolean;
+	message: string;
+	data?: CategoryInfo;
+}
+
+const createCategory = (req: CreateCategoryReq) => {
+	// Validar parámetros mínimos antes de enviar
+	const payload = {
+		nombre: String(req.nombre),
+		descripcion: String(req.descripcion ?? ""),
+		activo: Boolean(req.activo),
+	};
+
+	return apiClient.post<CreateCategoryRes>({
+		url: CategoryApi.Categories,
+		data: payload,
+	});
+};
+
 export default {
 	getCategories,
+	updateCategory,
+	createCategory,
 };

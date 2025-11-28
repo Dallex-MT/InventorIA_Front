@@ -1,11 +1,13 @@
 import userService, { type UpdateUserProfileReq, type UpdateUserProfileRes } from "@/api/services/userService";
+import { useLoginStateContext } from "@/pages/sys/login/providers/login-provider";
+import { useRouter } from "@/routes/hooks";
 import { useUserActions, useUserInfo } from "@/store/userStore";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardFooter } from "@/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/ui/form";
 import { Input } from "@/ui/input";
-import { decryptCedulaAES, validateEcuadorianID, validateEmail } from "@/utils/crypto-utils";
+import { decryptCedulaAES, validateEmail } from "@/utils/crypto-utils";
 import { getItem, setItem } from "@/utils/storage";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -13,8 +15,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import type { UserInfo } from "#/entity";
 import { StorageEnum } from "#/enum";
-import { useRouter } from "@/routes/hooks";
-import { useLoginStateContext } from "@/pages/sys/login/providers/login-provider";
 
 export default function GeneralTab() {
 	const { t } = useTranslation();
@@ -94,13 +94,6 @@ export default function GeneralTab() {
 			const emailValidation = validateEmail(data.correo);
 			if (!emailValidation.valid) {
 				setError(emailValidation.message);
-				return;
-			}
-
-			// Validación de cédula
-			const cedulaValidation = validateEcuadorianID(data.cedula);
-			if (!cedulaValidation.valid) {
-				setError(cedulaValidation.message);
 				return;
 			}
 

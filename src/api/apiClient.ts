@@ -8,7 +8,6 @@ import { toast } from "sonner";
 // Crear instancia de axios con manejo de cookies
 const axiosInstance = axios.create({
 	baseURL: import.meta.env.VITE_APP_BASE_API,
-	timeout: 50000,
 	headers: { "Content-Type": "application/json;charset=utf-8" },
 	withCredentials: true,
 });

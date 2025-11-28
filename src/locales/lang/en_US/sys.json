@@ -77,7 +77,7 @@
 			"scanSign": "scanning the code to complete the login",
 			"sendEmailButton": "Send Email",
 			"sendSmsButton": "Send SMS code",
-			"sendSmsText": "Reacquire in                                                   {{ second }}s",
+			"sendSmsText": "Reacquire in                                                               {{ second }}s",
 			"signInDesc": "Enter your personal details and get started!",
 			"signInFormTitle": "Login to your account",
 			"signInPrimaryTitle": "Hi, Welcome Back",
@@ -128,7 +128,33 @@
 			"icon": "Icon",
 			"iframe": "Iframe",
 			"kanban": "Kanban",
-			"reports": "Reports",
+			"reports": {
+				"index": "Reports",
+				"title": "Reports System",
+				"description": "Generate reports based on system data",
+				"type": "Report Type",
+				"filters": {
+					"date_range": "Date Range",
+					"status": "Status",
+					"search": "Search",
+					"apply": "Apply",
+					"clear": "Clear"
+				},
+				"views": {
+					"table": "Table",
+					"chart": "Chart"
+				},
+				"export": {
+					"title": "Export",
+					"pdf": "Export to PDF",
+					"excel": "Export to Excel"
+				},
+				"empty": "No data available for the selected report",
+				"types": {
+					"invoices": "Invoices",
+					"products": "Products"
+				}
+			},
 			"label": "Item Label",
 			"permission": "Permission",
 			"permission.page_test": "Page Permission Test",
@@ -191,11 +217,13 @@
 					"ref_price": "Reference Price",
 					"unit": "Unit",
 					"status": {
+						"all": "All",
 						"index": "Status",
 						"active": "Active",
 						"inactive": "Inactive"
 					},
-					"actions": "Actions"
+					"actions": "Actions",
+					"edit": "Edit Product"
 				},
 				"category": {
 					"index": "Categories",
@@ -205,14 +233,21 @@
 					"description": "Description",
 					"status": {
 						"index": "Status",
+						"all": "All",
 						"active": "Active",
 						"inactive": "Inactive"
 					},
 					"created_at": "Created At",
-					"actions": "Actions"
+					"actions": "Actions",
+					"edit": "Edit Category",
+					"create": "Create Category",
+					"confirm": "Confirm",
+					"cancel": "Cancel"
 				},
 				"invoice": {
 					"index": "Invoices",
+					"new": "New Invoice",
+					"edit": "Edit Invoice",
 					"detail": {
 						"index": "Invoice Details",
 						"product": "Products",
@@ -222,6 +257,7 @@
 						"subtotal": "Subtotal",
 						"status": {
 							"index": "Status",
+							"all": "All",
 							"active": "Active",
 							"inactive": "Inactive"
 						},
@@ -251,6 +287,7 @@
 					"observations": "Observations",
 					"status": {
 						"index": "Status",
+						"all": "All",
 						"borrador": "Draft",
 						"confirmada": "Confirmed",
 						"anulada": "Cancelled"

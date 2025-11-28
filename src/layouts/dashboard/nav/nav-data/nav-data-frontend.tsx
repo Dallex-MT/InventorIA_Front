@@ -11,11 +11,6 @@ export const frontendNavData: NavProps["data"] = [
 				path: "/workbench",
 				icon: <Icon icon="local:ic-workbench" size="24" />,
 			},
-			{
-				title: "sys.nav.analysis",
-				path: "/analysis",
-				icon: <Icon icon="local:ic-analysis" size="24" />,
-			},
 		],
 	},
 	{
@@ -43,14 +38,14 @@ export const frontendNavData: NavProps["data"] = [
 		name: "sys.nav.inventory.index",
 		items: [
 			{
-				title: "sys.nav.inventory.product.index",
-				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
-				path: "/inventory/product",
-			},
-			{
 				title: "sys.nav.inventory.category.index",
 				icon: <Icon icon="solar:folder-bold-duotone" size="24" />,
 				path: "/inventory/category",
+			},
+			{
+				title: "sys.nav.inventory.product.index",
+				icon: <Icon icon="solar:box-bold-duotone" size="24" />,
+				path: "/inventory/product",
 			},
 			{
 				title: "sys.nav.inventory.invoice.index",

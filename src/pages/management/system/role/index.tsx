@@ -1,3 +1,4 @@
+import roleService, { type QueryParams } from "@/api/services/roleService";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
@@ -8,7 +9,6 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { Role, Role_Old } from "#/entity";
-import roleService, { type QueryParams } from "@/api/services/roleService";
 import { RoleModal, type RoleModalProps } from "./role-modal";
 
 // Datos se cargan desde el servicio; se elimina el mock local
@@ -123,9 +123,6 @@ export default function RolePage() {
 				<div className="flex w-full justify-center text-gray">
 					<Button variant="ghost" size="icon" onClick={() => onEdit(record)}>
 						<Icon icon="solar:pen-bold-duotone" size={18} />
-					</Button>
-					<Button variant="ghost" size="icon">
-						<Icon icon="mingcute:delete-2-fill" size={18} className="text-error!" />
 					</Button>
 				</div>
 			),

@@ -67,13 +67,14 @@ export function decryptCedulaAES(cipher: string, config?: CryptoConfig): Decrypt
 }
 
 export function validateEcuadorianID(cedula: string): ValidationResult {
+	const error = "Cédula inválida";
 	const clean = String(cedula ?? "").replace(/\D/g, "");
 	if (clean.length !== 10) return { valid: false, message: "La cédula debe tener 10 dígitos" };
 	const province = Number(clean.substring(0, 2));
-	if (Number.isNaN(province) || province < 0 || province > 24) return { valid: false, message: "Provincia inválida (00-24)" };
+	if (Number.isNaN(province) || province < 0 || province > 24) return { valid: false, message: error };
 	const third = Number(clean[2]);
-	if (third < 0 || third > 5) return { valid: false, message: "El tercer dígito debe ser entre 0 y 5" };
-	if (!/^\d{10}$/.test(clean)) return { valid: false, message: "Los dígitos 4-9 deben ser numéricos" };
+	if (third < 0 || third > 5) return { valid: false, message: error };
+	if (!/^\d{10}$/.test(clean)) return { valid: false, message: error };
 	const coefs = [2, 1, 2, 1, 2, 1, 2, 1, 2];
 	let sum = 0;
 	for (let i = 0; i < 9; i++) {
@@ -82,7 +83,7 @@ export function validateEcuadorianID(cedula: string): ValidationResult {
 		sum += prod;
 	}
 	const checkDigit = sum % 10 === 0 ? 0 : 10 - (sum % 10);
-	if (checkDigit !== Number(clean[9])) return { valid: false, message: "Décimo dígito verificador incorrecto" };
+	if (checkDigit !== Number(clean[9])) return { valid: false, message: error };
 	return { valid: true, message: "Cédula válida" };
 }
 

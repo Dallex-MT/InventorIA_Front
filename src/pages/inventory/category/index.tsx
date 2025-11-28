@@ -1,7 +1,6 @@
 import categoryService, { type QueryParams } from "@/api/services/categoryService";
 import { Icon } from "@/components/icon";
 import useLocale from "@/locales/use-locale";
-import { usePathname, useRouter } from "@/routes/hooks";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
@@ -9,12 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import type { CategoryInfo } from "#/entity";
+import { type CategoryEditFormValues, CategoryEditModal } from "./category-modal";
 
 export default function CategoryPage() {
 	const { t } = useLocale();
-	const { push } = useRouter();
-	const pathname = usePathname();
 
 	const [categories, setCategories] = useState<CategoryInfo[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -25,6 +24,12 @@ export default function CategoryPage() {
 		total: 0,
 	});
 	const [activoFilter, setActivoFilter] = useState<boolean | undefined>(undefined);
+
+	// Estados para edición de categoría
+	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+	const [editingCategory, setEditingCategory] = useState<CategoryInfo | null>(null);
+	const [editLoading, setEditLoading] = useState(false);
+	const [editError, setEditError] = useState<string | null>(null);
 
 	const fetchCategories = async (params: QueryParams) => {
 		setLoading(true);
@@ -108,16 +113,12 @@ export default function CategoryPage() {
 						variant="ghost"
 						size="icon"
 						onClick={() => {
-							push(`${pathname}/${record.id}`);
+							setEditingCategory(record);
+							setEditError(null);
+							setIsEditModalOpen(true);
 						}}
 					>
-						<Icon icon="mdi:card-account-details" size={18} />
-					</Button>
-					<Button variant="ghost" size="icon" onClick={() => {}}>
 						<Icon icon="solar:pen-bold-duotone" size={18} />
-					</Button>
-					<Button variant="ghost" size="icon">
-						<Icon icon="mingcute:delete-2-fill" size={18} className="text-error!" />
 					</Button>
 				</div>
 			),
@@ -173,7 +174,16 @@ export default function CategoryPage() {
 								<SelectItem value="false">{t("sys.nav.inventory.category.status.inactive")}</SelectItem>
 							</SelectContent>
 						</Select>
-						<Button onClick={() => {}}>{t("sys.nav.inventory.category.new")}</Button>
+						<Button
+							onClick={() => {
+								// Abrir modal en modo creación
+								setEditingCategory(null);
+								setEditError(null);
+								setIsEditModalOpen(true);
+							}}
+						>
+							{t("sys.nav.inventory.category.new")}
+						</Button>
 						{error && (
 							<div className="flex items-center gap-2">
 								<Badge variant="error">Error: {error}</Badge>
@@ -205,6 +215,70 @@ export default function CategoryPage() {
 					onChange={handleTableChange}
 					columns={columns}
 					dataSource={validatedCategories}
+				/>
+				{/* Modal de edición/creación de categoría */}
+				<CategoryEditModal
+					open={isEditModalOpen}
+					title={(editingCategory ? t("sys.nav.inventory.category.edit") : t("sys.nav.inventory.category.new")) as string}
+					initialValue={{
+						nombre: editingCategory?.nombre ?? "",
+						descripcion: editingCategory?.descripcion ?? "",
+						activo: Boolean(editingCategory?.activo ?? true),
+					}}
+					isCreate={!editingCategory}
+					loading={editLoading}
+					error={editError}
+					onCancel={() => {
+						setIsEditModalOpen(false);
+						setEditingCategory(null);
+						setEditError(null);
+					}}
+					onSubmit={async (values: CategoryEditFormValues) => {
+						setEditLoading(true);
+						setEditError(null);
+						try {
+							if (!editingCategory) {
+								// Crear nueva categoría
+								const res = await categoryService.createCategory({
+									nombre: values.nombre,
+									descripcion: values.descripcion,
+									activo: values.activo,
+								});
+								if (res.success) {
+									toast.success(res.message || "Categoría creada exitosamente");
+									setIsEditModalOpen(false);
+									setEditingCategory(null);
+									await fetchCategories({ page: pagination.current, limit: pagination.pageSize, active: activoFilter });
+								} else {
+									setEditError(res.message || "Error al crear categoría");
+									toast.error(res.message || "Error al crear categoría");
+								}
+							} else {
+								// Editar categoría existente
+								const res = await categoryService.updateCategory({
+									categoryId: Number(editingCategory.id),
+									nombre: values.nombre,
+									descripcion: values.descripcion,
+									activo: values.activo,
+								});
+								if (res.success) {
+									toast.success(res.message || "Categoría actualizada exitosamente");
+									setIsEditModalOpen(false);
+									setEditingCategory(null);
+									await fetchCategories({ page: pagination.current, limit: pagination.pageSize, active: activoFilter });
+								} else {
+									setEditError(res.message || "Error al actualizar categoría");
+									toast.error(res.message || "Error al actualizar categoría");
+								}
+							}
+						} catch (e: any) {
+							console.error(e);
+							setEditError(e?.message || (editingCategory ? "Error al actualizar categoría" : "Error al crear categoría"));
+							toast.error(e?.message || (editingCategory ? "Error al actualizar categoría" : "Error al crear categoría"));
+						} finally {
+							setEditLoading(false);
+						}
+					}}
 				/>
 			</CardContent>
 		</Card>
