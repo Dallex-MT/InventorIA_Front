@@ -9,7 +9,8 @@ export interface UserInfo {
 	rol_id: number;
 	activo: boolean;
 	fecha_creacion?: string;
-	ultima_sesion?: string;
+	fecha_actualizacion?: string;
+	ultimo_acceso?: string;
 }
 
 export interface Permission_Old {
@@ -61,6 +62,12 @@ export interface Role extends CommonOptions {
 	activo: boolean;
 	fecha_creacion: string;
 	fecha_actualizacion: string;
+	permisos?: PermissionInfo[];
+}
+
+export interface PermissionInfo {
+	id: number;
+	nombre: string;
 }
 
 export interface Permission extends CommonOptions {
@@ -101,7 +108,12 @@ export interface ProductInfo {
 	nombre: string;
 	descripcion: string;
 	categoria_id: number;
-	unidad_medida: string;
+	unidad_medida: {
+		id: number;
+		nombre: string;
+		abreviatura: string;
+		activo: number;
+	};
 	stock_actual: number;
 	stock_minimo: number;
 	precio_referencia: number;

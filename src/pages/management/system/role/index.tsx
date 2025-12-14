@@ -8,7 +8,7 @@ import { Table } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { Role, Role_Old } from "#/entity";
+import type { PermissionInfo, Role } from "#/entity";
 import { RoleModal, type RoleModalProps } from "./role-modal";
 
 // Datos se cargan desde el servicio; se elimina el mock local
@@ -20,6 +20,7 @@ const DEFAULT_ROLE_VALUE: Role = {
 	activo: true,
 	fecha_creacion: new Date().toISOString(),
 	fecha_actualizacion: new Date().toISOString(),
+	permisos: [],
 };
 export default function RolePage() {
 	const { t } = useTranslation();
@@ -32,13 +33,14 @@ export default function RolePage() {
 		total: 0,
 	});
 	const [activoFilter, setActivoFilter] = useState<boolean | undefined>(undefined);
+	const [permissionsOptions, setPermissionsOptions] = useState<PermissionInfo[]>([]);
 	const [roleModalProps, setRoleModalProps] = useState<RoleModalProps>({
 		formValue: { ...DEFAULT_ROLE_VALUE },
 		title: "Nuevo",
 		show: false,
-		onOk: () => {
-			setRoleModalProps((prev) => ({ ...prev, show: false }));
-		},
+		permissionsOptions: [],
+		isEdit: false,
+		onSubmit: async () => {},
 		onCancel: () => {
 			setRoleModalProps((prev) => ({ ...prev, show: false }));
 		},
@@ -77,6 +79,19 @@ export default function RolePage() {
 		fetchRoles({ page: 1, limit: 10, active: activoFilter });
 	}, [activoFilter]);
 
+	useEffect(() => {
+		roleService
+			.getPermissions()
+			.then((res) => {
+				if (res.success && Array.isArray(res.data)) {
+					setPermissionsOptions(
+						res.data.map((p) => ({ id: Number(p.id), nombre: String(p.nombre ?? "") })).filter((p) => !Number.isNaN(p.id) && p.nombre.length > 0),
+					);
+				}
+			})
+			.catch(() => {});
+	}, []);
+
 	const handleTableChange = (newPagination: TablePaginationConfig) => {
 		fetchRoles({
 			page: newPagination.current || 1,
@@ -96,23 +111,20 @@ export default function RolePage() {
 			ellipsis: true,
 		},
 		{
+			title: t("sys.nav.system.permission"),
+			dataIndex: "permisos",
+			width: 240,
+			render: (permisos: PermissionInfo[] | undefined) => {
+				if (!Array.isArray(permisos) || permisos.length === 0) return "-";
+				return permisos.map((p) => p.nombre).join(", ");
+			},
+		},
+		{
 			title: t("sys.nav.system.role.status"),
 			dataIndex: "activo",
 			align: "center",
 			width: 95,
 			render: (activo) => <Badge variant={activo ? "success" : "error"}>{activo ? t("sys.nav.system.role.active") : t("sys.nav.system.role.inactive")}</Badge>,
-		},
-		{
-			title: t("sys.nav.system.role.created_at"),
-			dataIndex: "fecha_creacion",
-			width: 165,
-			render: (fecha) => new Date(fecha).toLocaleString(),
-		},
-		{
-			title: t("sys.nav.system.role.updated_at"),
-			dataIndex: "fecha_actualizacion",
-			width: 165,
-			render: (fecha) => new Date(fecha).toLocaleString(),
 		},
 		{
 			title: t("sys.nav.system.role.actions"),
@@ -141,6 +153,9 @@ export default function RolePage() {
 				activo: Boolean(role.activo),
 				fecha_creacion: String(role.fecha_creacion ?? new Date().toISOString()),
 				fecha_actualizacion: String(role.fecha_actualizacion ?? role.fecha_creacion ?? new Date().toISOString()),
+				permisos: Array.isArray(role.permisos)
+					? role.permisos.map((p: any) => ({ id: Number(p?.id), nombre: String(p?.nombre ?? "") })).filter((p) => !Number.isNaN(p.id) && p.nombre.length > 0)
+					: [],
 			};
 
 			if (Number.isNaN(cleanRole.id)) return null;
@@ -157,15 +172,48 @@ export default function RolePage() {
 				...prev.formValue,
 				...DEFAULT_ROLE_VALUE,
 			},
+			permissionsOptions,
+			isEdit: false,
+			onSubmit: async (values) => {
+				try {
+					const res = await roleService.createRole({
+						nombre: values.nombre,
+						descripcion: values.descripcion,
+						activo: values.activo,
+						permisos: values.permisos,
+					});
+					if (res.success) {
+						setRoleModalProps((p) => ({ ...p, show: false }));
+						await fetchRoles({ page: pagination.current, limit: pagination.pageSize, active: activoFilter });
+					}
+				} catch {}
+			},
 		}));
 	};
 
-	const onEdit = (formValue: Role_Old) => {
+	const onEdit = (formValue: Role) => {
 		setRoleModalProps((prev) => ({
 			...prev,
 			show: true,
 			title: t("sys.nav.system.role.edit_role"),
 			formValue,
+			permissionsOptions,
+			isEdit: true,
+			onSubmit: async (values) => {
+				try {
+					const res = await roleService.updateRole({
+						roleId: Number(formValue.id),
+						nombre: values.nombre,
+						descripcion: values.descripcion,
+						activo: values.activo,
+						permisos: values.permisos,
+					});
+					if (res.success) {
+						setRoleModalProps((p) => ({ ...p, show: false }));
+						await fetchRoles({ page: pagination.current, limit: pagination.pageSize, active: activoFilter });
+					}
+				} catch {}
+			},
 		}));
 	};
 

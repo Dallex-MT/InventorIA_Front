@@ -55,7 +55,7 @@ export default function GeneralTab() {
 		rol_id: Number(u.rol_id),
 		activo: Number(u.activo) === 1 || (u.activo as unknown as boolean) === true,
 		fecha_creacion: u.fecha_creacion,
-		ultima_sesion: u.ultimo_acceso,
+		ultimo_acceso: u.ultimo_acceso,
 	});
 
 	// Actualiza localStorage de forma segura y evitando escrituras redundantes

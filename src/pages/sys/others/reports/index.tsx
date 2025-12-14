@@ -1,5 +1,6 @@
 import categoryService from "@/api/services/categoryService";
 import reportService, { type ReportFilters } from "@/api/services/reportService";
+import logoPng from "@/assets/images/background/Logo.png";
 import { Chart, useChart } from "@/components/chart";
 import { Icon } from "@/components/icon";
 import { Badge } from "@/ui/badge";
@@ -184,85 +185,135 @@ export default function ReportsPage() {
 	}, [loadAllReports]);
 
 	// Funciones de exportación
-	const handleExportInventory = (format: "pdf" | "excel" | "csv") => {
+	const toDataUrl = async (url: string) => {
+		const res = await fetch(url);
+		const blob = await res.blob();
+		return await new Promise<string>((resolve) => {
+			const reader = new FileReader();
+			reader.onloadend = () => resolve(String(reader.result));
+			reader.readAsDataURL(blob);
+		});
+	};
+
+	const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		toDataUrl(logoPng)
+			.then((d) => setLogoDataUrl(d))
+			.catch(() => setLogoDataUrl(null));
+	}, []);
+
+	const buildInventoryTitle = () => {
+		const hasFilters = Boolean(categoriaFilter || estadoFilter);
+		const startStr = startDate ? dayjs(startDate).format("DD/MM/YYYY") : undefined;
+		const endStr = endDate ? dayjs(endDate).format("DD/MM/YYYY") : undefined;
+		if (!hasFilters) {
+			return { title: "Reporte del Inventario Actual", titleRows: ["Reporte del Inventario Actual"] };
+		}
+		const filtros: string[] = [];
+		if (categoriaFilter) {
+			const catName = categories.find((c) => c.id === categoriaFilter)?.nombre || String(categoriaFilter);
+			filtros.push(`Categoria: ${catName}`);
+		}
+		const fechaLine = startStr && endStr ? `Fechas: ${startStr} - ${endStr}` : undefined;
+		const subtitleLines = [filtros.join(" | "), fechaLine].filter(Boolean) as string[];
+		return { title: "Reporte del Inventario", subtitleLines, titleRows: ["Reporte del Inventario", ...subtitleLines] };
+	};
+
+	const handleExportInventory = async (format: "pdf" | "excel" | "csv") => {
 		if (!inventoryData) {
 			toast.error("No hay datos para exportar");
 			return;
 		}
 
 		const columns: ExportColumn[] = [
-			{ title: "ID", dataIndex: "id" },
 			{ title: "Nombre", dataIndex: "nombre" },
 			{ title: "Categoría", dataIndex: "categoria_id" },
+			{ title: "Unidad", dataIndex: "unidad_medida_nombre" },
 			{ title: "Stock Actual", dataIndex: "stock_actual" },
 			{ title: "Stock Mínimo", dataIndex: "stock_minimo" },
-			{ title: "Unidad", dataIndex: "unidad_medida" },
 			{ title: "Precio Referencia", dataIndex: "precio_referencia", render: (v) => fCurrency(v) },
-			{
-				title: "Valor Total",
-				dataIndex: "valor_total",
-				render: (_, record) => fCurrency(record.stock_actual * record.precio_referencia),
-			},
-			{
-				title: "Estado",
-				dataIndex: "estado",
-				render: (_, record) => {
-					if (record.stock_actual <= record.stock_minimo * 0.5) return "Crítico";
-					if (record.stock_actual <= record.stock_minimo) return "Bajo";
-					return "Normal";
-				},
-			},
+			{ title: "Valor Total", dataIndex: "valor_total", render: (v) => fCurrency(v) },
 		];
 
 		const data = inventoryData.products.map((p) => ({
 			...p,
+			unidad_medida_nombre: p.unidad_medida?.abreviatura || p.unidad_medida?.nombre || "",
 			valor_total: p.stock_actual * p.precio_referencia,
 		}));
 
+		const t = buildInventoryTitle();
 		if (format === "pdf") {
 			exportToPDF({
-				title: "Reporte de Inventario Actual",
-				fileName: "inventario_actual",
+				title: t.title,
+				fileName: "Reporte_inventario",
 				columns,
 				data,
-				subtitle: `Total: ${inventoryData.totalProducts} productos | Valor Total: ${fCurrency(inventoryData.totalValue)}`,
+				themeColor: [158, 58, 61],
+				logoDataUrl: logoDataUrl || undefined,
+				subtitle: undefined,
+				subtitleLines: t.titleRows.slice(1),
+				titleLines: [],
 			});
 		} else if (format === "excel") {
 			exportToExcel({
 				sheetName: "Inventario",
-				fileName: "inventario_actual",
+				fileName: "Reporte_inventario",
 				data,
 				columns,
+				titleRows: t.titleRows,
 			});
 		} else {
 			exportToCSV({
-				fileName: "inventario_actual",
+				fileName: "Reporte_inventario",
 				data,
 				columns,
+				titleRows: t.titleRows,
 			});
 		}
 	};
 
-	const handleExportConsumption = (format: "pdf" | "excel" | "csv") => {
+	const buildConsumptionTitle = () => {
+		const hasFilters = Boolean(categoriaFilter || estadoFilter);
+		const startStr = startDate ? dayjs(startDate).format("DD/MM/YYYY") : undefined;
+		const endStr = endDate ? dayjs(endDate).format("DD/MM/YYYY") : undefined;
+		const filtros: string[] = [];
+		if (categoriaFilter) {
+			const catName = categories.find((c) => c.id === categoriaFilter)?.nombre || String(categoriaFilter);
+			filtros.push(`Categoria: ${catName}`);
+		}
+		const fechaLine = startStr && endStr ? `Fechas: ${startStr} - ${endStr}` : undefined;
+		if (!hasFilters && fechaLine) {
+			return { title: "Reporte Histórico de Consumo", subtitle: fechaLine, titleRows: ["Reporte Histórico de Consumo", fechaLine] };
+		}
+		const subtitleLines = [filtros.join(" | "), fechaLine].filter(Boolean) as string[];
+		return { title: "Reporte Histórico de Consumo", subtitleLines, titleRows: ["Reporte Histórico de Consumo", ...subtitleLines] };
+	};
+
+	const handleExportConsumption = async (format: "pdf" | "excel" | "csv") => {
 		if (!consumptionData) {
 			toast.error("No hay datos para exportar");
 			return;
 		}
 
 		const columns: ExportColumn[] = [
-			{ title: "ID Producto", dataIndex: "product_id" },
-			{ title: "Nombre", dataIndex: "product_name" },
-			{ title: "Cantidad Consumida", dataIndex: "quantity_consumed" },
+			{ title: "Producto", dataIndex: "product_name" },
 			{ title: "Unidad", dataIndex: "unit" },
+			{ title: "Cantidad Consumida", dataIndex: "quantity_consumed" },
 		];
 
+		const t = buildConsumptionTitle();
 		if (format === "pdf") {
 			exportToPDF({
-				title: "Reporte Histórico de Consumo",
+				title: t.title,
 				fileName: "consumo_historico",
 				columns,
 				data: consumptionData.products,
-				subtitle: `Período: ${consumptionData.period} | Total: ${consumptionData.totalConsumed.toFixed(2)}`,
+				themeColor: [158, 58, 61],
+				logoDataUrl: logoDataUrl || undefined,
+				subtitle: undefined,
+				subtitleLines: t.titleRows.slice(1),
+				titleLines: [],
 			});
 		} else if (format === "excel") {
 			exportToExcel({
@@ -270,12 +321,14 @@ export default function ReportsPage() {
 				fileName: "consumo_historico",
 				data: consumptionData.products,
 				columns,
+				titleRows: t.titleRows,
 			});
 		} else {
 			exportToCSV({
 				fileName: "consumo_historico",
 				data: consumptionData.products,
 				columns,
+				titleRows: t.titleRows,
 			});
 		}
 	};
@@ -307,36 +360,13 @@ export default function ReportsPage() {
 	}, [valuationData]);
 
 	// Columnas de tablas
-	const inventoryColumns: ColumnsType<ProductInfo & { valor_total: number; estado: string }> = [
-		{ title: "ID", dataIndex: "id", width: 80 },
+	const inventoryColumns: ColumnsType<ProductInfo & { valor_total: number }> = [
 		{ title: "Nombre", dataIndex: "nombre", width: 200, ellipsis: true },
+		{ title: "Unidad", dataIndex: "unidad_medida", width: 100, render: (u) => u?.abreviatura || u?.nombre || "-" },
 		{ title: "Stock Actual", dataIndex: "stock_actual", width: 120, align: "right" },
 		{ title: "Stock Mínimo", dataIndex: "stock_minimo", width: 120, align: "right" },
-		{ title: "Unidad", dataIndex: "unidad_medida", width: 100 },
-		{
-			title: "Precio Ref.",
-			dataIndex: "precio_referencia",
-			width: 120,
-			align: "right",
-			render: (v) => fCurrency(v),
-		},
-		{
-			title: "Valor Total",
-			dataIndex: "valor_total",
-			width: 120,
-			align: "right",
-			render: (v) => fCurrency(v),
-		},
-		{
-			title: "Estado",
-			dataIndex: "estado",
-			width: 100,
-			align: "center",
-			render: (estado) => {
-				const variant = estado === "Crítico" ? "error" : estado === "Bajo" ? "warning" : "success";
-				return <Badge variant={variant}>{estado}</Badge>;
-			},
-		},
+		{ title: "Precio Ref.", dataIndex: "precio_referencia", width: 120, align: "right", render: (v) => fCurrency(v) },
+		{ title: "Valor Total", dataIndex: "valor_total", width: 120, align: "right", render: (v) => fCurrency(v) },
 	];
 
 	return (
@@ -355,7 +385,7 @@ export default function ReportsPage() {
 								<PopoverTrigger asChild>
 									<Button variant="outline" className={cn("w-full justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
 										<CalendarIcon className="mr-2 h-4 w-4" />
-										{startDate ? dayjs(startDate).format("DD/MM/YYYY") : "Seleccionar fecha"}
+										{startDate ? dayjs(startDate).format("DD-MM-YYYY") : "Seleccionar fecha"}
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-auto p-0" align="start">
@@ -371,7 +401,7 @@ export default function ReportsPage() {
 								<PopoverTrigger asChild>
 									<Button variant="outline" className={cn("w-full justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
 										<CalendarIcon className="mr-2 h-4 w-4" />
-										{endDate ? dayjs(endDate).format("DD/MM/YYYY") : "Seleccionar fecha"}
+										{endDate ? dayjs(endDate).format("DD-MM-YYYY") : "Seleccionar fecha"}
 									</Button>
 								</PopoverTrigger>
 								<PopoverContent className="w-auto p-0" align="start">
@@ -574,8 +604,8 @@ export default function ReportsPage() {
 										size="small"
 										scroll={{ x: "max-content" }}
 										columns={[
-											{ title: "ID", dataIndex: "product_id", width: 100 },
 											{ title: "Producto", dataIndex: "product_name", width: 200 },
+											{ title: "Unidad", dataIndex: "unit", width: 100 },
 											{
 												title: "Cantidad Consumida",
 												dataIndex: "quantity_consumed",
@@ -583,7 +613,6 @@ export default function ReportsPage() {
 												align: "right",
 												render: (v) => v.toFixed(2),
 											},
-											{ title: "Unidad", dataIndex: "unit", width: 100 },
 										]}
 										dataSource={consumptionData.products}
 										pagination={{ pageSize: 10, showSizeChanger: true }}

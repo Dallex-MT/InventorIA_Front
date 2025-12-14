@@ -12,6 +12,7 @@ export enum ResultEnum {
 export enum StorageEnum {
 	UserInfo = "userInfo",
 	UserToken = "userToken",
+	UserPermissions = "userPermissions",
 	Settings = "settings",
 	I18N = "i18nextLng",
 }

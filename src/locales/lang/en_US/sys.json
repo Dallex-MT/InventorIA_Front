@@ -55,7 +55,7 @@
 			"confirmPasswordPlaceholder": "Please input confirm password",
 			"diffPwd": "The two passwords are inconsistent",
 			"email": "Email",
-			"emaildPlaceholder": "Please input email",
+			"emailPlaceholder": "Please input email",
 			"forgetFormSecondTitle": "Please enter the email address associated with your account and We will email you a link to reset your password.",
 			"forgetFormTitle": "Reset password",
 			"forgetPassword": "Forget Password?",
@@ -77,7 +77,7 @@
 			"scanSign": "scanning the code to complete the login",
 			"sendEmailButton": "Send Email",
 			"sendSmsButton": "Send SMS code",
-			"sendSmsText": "Reacquire in                                                               {{ second }}s",
+			"sendSmsText": "Reacquire in                                                                 {{ second }}s",
 			"signInDesc": "Enter your personal details and get started!",
 			"signInFormTitle": "Login to your account",
 			"signInPrimaryTitle": "Hi, Welcome Back",
@@ -215,7 +215,7 @@
 						"minimum": "Minimum Stock"
 					},
 					"ref_price": "Reference Price",
-					"unit": "Unit",
+					"unit": "Unit of Measure",
 					"status": {
 						"all": "All",
 						"index": "Status",

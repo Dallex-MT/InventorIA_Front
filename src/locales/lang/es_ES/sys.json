@@ -67,7 +67,7 @@
 			"forgetPassword": "¿Olvidó su contraseña?",
 			"otherSignIn": "Otras formas de ingresar",
 			"sendSmsButton": "Enviar código",
-			"sendSmsText": "Reintente en                                                                                     {{ second }}s",
+			"sendSmsText": "Reintente en                                                                                       {{ second }}s",
 			"sendEmailButton": "Enviar correo",
 
 			"loginSuccessTitle": "Ingreso exitoso",
@@ -76,7 +76,7 @@
 			"accountPlaceholder": "Usuario",
 			"passwordPlaceholder": "Contraseña",
 			"confirmPasswordPlaceholder": "Confirmar contraseña",
-			"emaildPlaceholder": "Correo electrónico",
+			"emailPlaceholder": "Correo electrónico",
 			"smsPlaceholder": "Código SMS",
 			"mobilePlaceholder": "Número de móvil",
 			"policyPlaceholder": "Debe aceptar para registrarse",
@@ -184,7 +184,7 @@
 						"minimum": "Stock Mínimo"
 					},
 					"ref_price": "Precio Ref.",
-					"unit": "Unidad",
+					"unit": "Unidad de Medida",
 					"status": {
 						"index": "Estado",
 						"all": "Todos",

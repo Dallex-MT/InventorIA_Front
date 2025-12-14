@@ -1,12 +1,13 @@
+import productService from "@/api/services/productService";
 import { Form, Input, InputNumber, Modal, Select, Switch } from "antd";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 export interface ProductEditFormValues {
 	nombre: string;
 	descripcion: string;
 	categoria_id: number;
-	unidad_medida: string;
+	unidad_medida_id: number;
 	stock_actual: number;
 	stock_minimo: number;
 	precio_referencia: number;
@@ -18,12 +19,14 @@ export interface ProductEditModalProps {
 	title?: string;
 	initialValue: ProductEditFormValues;
 	categorias?: { id: number; label: string }[]; // opcional si se desea listar categorías
-	unidades?: string[]; // opcional si se desea listar unidades comunes
+	unidades?: { id: number; label: string }[]; // opcional si se desea listar unidades comunes
 	categoriesLoading?: boolean;
 	loading?: boolean;
 	error?: string | null;
 	// Modo creación: reutiliza el mismo modal para crear nuevos registros
 	isCreate?: boolean;
+	freezeStockActual?: boolean;
+	disableClose?: boolean;
 	onSubmit: (values: ProductEditFormValues) => void;
 	onCancel: () => void;
 }
@@ -38,6 +41,8 @@ export function ProductEditModal({
 	loading,
 	error,
 	isCreate = false,
+	freezeStockActual = false,
+	disableClose = false,
 	onSubmit,
 	onCancel,
 }: ProductEditModalProps) {
@@ -50,13 +55,53 @@ export function ProductEditModal({
 			nombre: String(initialValue?.nombre ?? ""),
 			descripcion: String(initialValue?.descripcion ?? ""),
 			categoria_id: Number(initialValue?.categoria_id ?? 0),
-			unidad_medida: String(initialValue?.unidad_medida ?? ""),
+			unidad_medida_id: Number(initialValue?.unidad_medida_id ?? 0),
 			stock_actual: Number(initialValue?.stock_actual ?? 0),
 			stock_minimo: Number(initialValue?.stock_minimo ?? 0),
 			precio_referencia: Number(initialValue?.precio_referencia ?? 0),
 			activo: initialValue?.activo !== undefined ? Boolean(initialValue.activo) : true,
 		};
 	}, [initialValue]);
+
+	const [unitOptions, setUnitOptions] = useState<{ value: number; label: string }[]>([]);
+
+	useEffect(() => {
+		let mounted = true;
+		const loadUnits = async () => {
+			try {
+				const res = await productService.getUnitMeasures();
+				if (mounted && res.success) {
+					const next = res.data.map((u) => ({ value: u.id, label: `${u.nombre} (${u.abreviatura})` }));
+					setUnitOptions((prev) => {
+						const same = prev.length === next.length && prev.every((p, i) => p.value === next[i].value && p.label === next[i].label);
+						if (!same) {
+							if (import.meta.env.DEV) console.debug("ProductEditModal: unidades actualizadas", next.length);
+							return next;
+						}
+						return prev;
+					});
+				} else if (mounted && unidades.length > 0) {
+					const next = unidades.map((u) => ({ value: u.id, label: u.label }));
+					setUnitOptions((prev) => {
+						const same = prev.length === next.length && prev.every((p, i) => p.value === next[i].value && p.label === next[i].label);
+						return same ? prev : next;
+					});
+				}
+			} catch {
+				if (mounted && unidades.length > 0) {
+					const next = unidades.map((u) => ({ value: u.id, label: u.label }));
+					setUnitOptions((prev) => {
+						const same = prev.length === next.length && prev.every((p, i) => p.value === next[i].value && p.label === next[i].label);
+						return same ? prev : next;
+					});
+				}
+			}
+		};
+		loadUnits();
+		return () => {
+			mounted = false;
+		};
+	}, [unidades]);
 
 	// Al abrir, si es creación, resetea; luego aplica initial values normalizados
 	useEffect(() => {
@@ -80,7 +125,7 @@ export function ProductEditModal({
 					nombre: String(values.nombre ?? "").trim(),
 					descripcion: String(values.descripcion ?? "").trim(),
 					categoria_id: Number(values.categoria_id),
-					unidad_medida: String(values.unidad_medida ?? ""),
+					unidad_medida_id: Number(values.unidad_medida_id ?? 0),
 					stock_actual: Number(values.stock_actual ?? 0),
 					stock_minimo: Number(values.stock_minimo ?? 0),
 					precio_referencia: Number(values.precio_referencia ?? 0),
@@ -101,6 +146,9 @@ export function ProductEditModal({
 			onCancel={onCancel}
 			confirmLoading={loading}
 			okButtonProps={{ disabled: Boolean(loading) || !canSubmit }}
+			maskClosable={!disableClose}
+			keyboard={!disableClose}
+			closable={!disableClose}
 			destroyOnClose
 		>
 			{error && <div style={{ color: "#ef4444", marginBottom: 8 }}>Error: {error}</div>}
@@ -137,25 +185,18 @@ export function ProductEditModal({
 				</Form.Item>
 
 				<Form.Item
-					name="unidad_medida"
+					name="unidad_medida_id"
 					label={t("sys.nav.inventory.product.unit") as string}
 					rules={[{ required: true, message: `${t("sys.nav.inventory.product.unit")} es requerido` }]}
 				>
-					<Select placeholder={t("sys.nav.inventory.product.unit") as string} allowClear>
-						{unidades.length > 0 ? (
-							unidades.map((u) => (
-								<Select.Option key={u} value={u}>
-									{u}
-								</Select.Option>
-							))
-						) : (
-							<>
-								<Select.Option value="kg">kg</Select.Option>
-								<Select.Option value="lb">lb</Select.Option>
-								<Select.Option value="und">und</Select.Option>
-							</>
-						)}
-					</Select>
+					<Select
+						placeholder={t("sys.nav.inventory.product.unit") as string}
+						allowClear
+						showSearch
+						optionFilterProp="label"
+						filterOption={(input, option) => ((option?.label as string) || "").toLowerCase().includes(input.toLowerCase())}
+						options={unitOptions}
+					/>
 				</Form.Item>
 
 				<Form.Item
@@ -163,7 +204,7 @@ export function ProductEditModal({
 					label={t("sys.nav.inventory.product.stock.current") as string}
 					rules={[{ required: true, message: `${t("sys.nav.inventory.product.stock.current")} es requerido` }]}
 				>
-					<InputNumber min={0} step={0.0001} style={{ width: "100%" }} />
+					<InputNumber min={0} step={1} style={{ width: "100%" }} disabled={freezeStockActual} />
 				</Form.Item>
 
 				<Form.Item
@@ -171,7 +212,7 @@ export function ProductEditModal({
 					label={t("sys.nav.inventory.product.stock.minimum") as string}
 					rules={[{ required: true, message: `${t("sys.nav.inventory.product.stock.minimum")} es requerido` }]}
 				>
-					<InputNumber min={0} step={0.0001} style={{ width: "100%" }} />
+					<InputNumber min={0} step={1} style={{ width: "100%" }} />
 				</Form.Item>
 
 				<Form.Item

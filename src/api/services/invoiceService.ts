@@ -6,6 +6,9 @@ export interface QueryParams {
 	page: number;
 	limit: number;
 	estado?: "BORRADOR" | "CONFIRMADA" | "ANULADA";
+	search?: string;
+	fecha_inicio?: string;
+	fecha_fin?: string;
 }
 
 export interface PaginatedInvoicesRes {
@@ -13,9 +16,11 @@ export interface PaginatedInvoicesRes {
 	message: string;
 	data: {
 		invoices: InvoiceInfo[];
-		total: number;
-		page: number;
-		totalPages: number;
+		pagination: {
+			page: number;
+			total: number;
+			totalPages: number;
+		};
 	};
 }
 
@@ -51,6 +56,16 @@ const getInvoices = (params?: QueryParams) => {
 		if (params.estado) {
 			queryParams?.append("estado", params.estado);
 		}
+		const search = params.search?.trim();
+		if (search) {
+			queryParams?.append("search", search);
+		}
+		if (params.fecha_inicio) {
+			queryParams?.append("fecha_inicio", params.fecha_inicio);
+		}
+		if (params.fecha_fin) {
+			queryParams?.append("fecha_fin", params.fecha_fin);
+		}
 	}
 
 	return apiClient.get<PaginatedInvoicesRes>({
@@ -64,6 +79,18 @@ const getInvoiceDetails = (invoiceId: number) => {
 	// Construir URL: /detalles-factura/factura/{id}
 	const url = `${InvoiceApi.InvoiceDetailsByInvoice}/${invoiceId}`;
 	return apiClient.get<InvoiceDetailsRes>({ url });
+};
+
+// Obtener una factura interna por ID
+export interface GetInvoiceByIdRes {
+	success: boolean;
+	message: string;
+	data?: InvoiceInfo;
+}
+
+const getInvoiceById = (invoiceId: number) => {
+	const url = `${InvoiceApi.Invoices}/${invoiceId}`;
+	return apiClient.get<GetInvoiceByIdRes>({ url });
 };
 
 // Actualizar una factura interna
@@ -156,6 +183,7 @@ const updateInvoiceFull = (invoiceId: number, payload: UpdateInvoiceFullReq) => 
 export default {
 	getInvoices,
 	getInvoiceDetails,
+	getInvoiceById,
 	updateInvoice,
 	processInvoiceImage,
 	createInvoiceFromProcess,

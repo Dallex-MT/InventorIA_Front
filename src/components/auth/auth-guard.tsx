@@ -13,15 +13,15 @@ interface AuthGuardProps {
 	/**
 	 * The permission/role to check
 	 */
-	check?: string;
+	check?: string | number;
 	/**
 	 * The permissions/roles to check (any one of them)
 	 */
-	checkAny?: string[];
+	checkAny?: Array<string | number>;
 	/**
 	 * The permissions/roles to check (all of them)
 	 */
-	checkAll?: string[];
+	checkAll?: Array<string | number>;
 	/**
 	 * The type of check to perform: 'role' or 'permission'
 	 * @default 'permission'

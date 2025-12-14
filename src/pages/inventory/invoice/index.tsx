@@ -3,10 +3,11 @@ import { Icon } from "@/components/icon";
 import useLocale from "@/locales/use-locale";
 import { usePathname, useRouter } from "@/routes/hooks";
 import { useInvoiceActions } from "@/store/invoiceStore";
+import { usePermissionFlags } from "@/store/userStore";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
-
+import { Input } from "@/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Table } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
@@ -21,6 +22,7 @@ export default function InvoicePage() {
 	const { push } = useRouter();
 	const pathname = usePathname();
 	const { setSelectedInvoiceId } = useInvoiceActions();
+	const { isReadOnly, canWrite } = usePermissionFlags();
 
 	const [invoices, setInvoices] = useState<InvoiceInfo[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -30,13 +32,19 @@ export default function InvoicePage() {
 		pageSize: 10,
 		total: 0,
 	});
-	const [estadoFilter, setEstadoFilter] = useState<InvoiceInfo["estado"] | undefined>(undefined);
+	const [estadoFilter, setEstadoFilter] = useState<InvoiceInfo["estado"] | undefined>(isReadOnly ? "CONFIRMADA" : undefined);
 	const [cameraOpen, setCameraOpen] = useState(false);
 	const [processLoading, setProcessLoading] = useState(false);
 	const [processError, setProcessError] = useState<string | null>(null);
 	const [processMessage, setProcessMessage] = useState<string | null>(null);
 	const [processedData, setProcessedData] = useState<InvoiceImageProcessData | null>(null);
 	const [processEditOpen, setProcessEditOpen] = useState(false);
+	// Búsqueda y filtros de fecha
+	const [searchText, setSearchText] = useState("");
+	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const [fechaInicio, setFechaInicio] = useState<string>("");
+	const [fechaFin, setFechaFin] = useState<string>("");
+	const [dateError, setDateError] = useState<string | null>(null);
 	void processedData;
 	void processMessage;
 
@@ -52,9 +60,9 @@ export default function InvoicePage() {
 			if (response?.data?.invoices && Array.isArray(response.data.invoices)) {
 				setInvoices(response.data.invoices);
 				setPagination({
-					current: response.data.page || params.page,
+					current: response.data.pagination.page || params.page,
 					pageSize: params.limit,
-					total: response.data.total || 0,
+					total: response.data.pagination.total || 0,
 				});
 			} else {
 				console.error("Estructura de respuesta inválida:", response);
@@ -72,10 +80,53 @@ export default function InvoicePage() {
 		}
 	};
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: carga inicial y cambios de filtro
+	// Debounce de búsqueda
 	useEffect(() => {
-		fetchInvoices({ page: 1, limit: 10, estado: estadoFilter });
-	}, [estadoFilter]);
+		const handler = setTimeout(() => {
+			setDebouncedSearch(searchText);
+		}, 400);
+		return () => clearTimeout(handler);
+	}, [searchText]);
+
+	// Validación de fecha
+	const isValidDateStr = (s: string) => {
+		if (!s) return false;
+		if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+		const d = new Date(s);
+		return !Number.isNaN(d.getTime());
+	};
+
+	// Carga inicial y cambios de filtros/búsqueda
+	// biome-ignore lint/correctness/useExhaustiveDependencies: carga inicial y cambios controlados
+	useEffect(() => {
+		// Validar fechas opcionales
+		const startOk = fechaInicio ? isValidDateStr(fechaInicio) : true;
+		const endOk = fechaFin ? isValidDateStr(fechaFin) : true;
+		if (!startOk || !endOk) {
+			setDateError("Formato de fecha inválido (YYYY-MM-DD)");
+			return;
+		}
+		if (fechaInicio && fechaFin && fechaInicio > fechaFin) {
+			setDateError("El rango de fechas es inválido: inicio > fin");
+			return;
+		}
+		setDateError(null);
+
+		// Regla: enviar búsqueda automática solo con 3+ caracteres (ignorando espacios)
+		const normalizedLen = debouncedSearch.replace(/\s+/g, "").length;
+		const shouldSearch = normalizedLen >= 3 || debouncedSearch.trim() === "";
+
+		if (!shouldSearch) return;
+
+		fetchInvoices({
+			page: 1,
+			limit: pagination.pageSize,
+			estado: estadoFilter,
+			search: debouncedSearch.trim() || undefined,
+			fecha_inicio: fechaInicio || undefined,
+			fecha_fin: fechaFin || undefined,
+		});
+	}, [estadoFilter, debouncedSearch, fechaInicio, fechaFin]);
 
 	// Función para abrir edición con detalles cargados en el modal de proceso
 	const handleEdit = async (invoice: InvoiceInfo) => {
@@ -117,14 +168,20 @@ export default function InvoicePage() {
 	};
 
 	const handleTableChange = (newPagination: TablePaginationConfig) => {
+		// Solo enviar búsqueda si cumple la regla
+		const normalizedLen = debouncedSearch.replace(/\s+/g, "").length;
+		const searchParam = normalizedLen >= 3 ? debouncedSearch.trim() : undefined;
 		fetchInvoices({
 			page: newPagination.current || 1,
 			limit: newPagination.pageSize || pagination.pageSize,
 			estado: estadoFilter,
+			search: searchParam,
+			fecha_inicio: isValidDateStr(fechaInicio) ? fechaInicio : undefined,
+			fecha_fin: isValidDateStr(fechaFin) ? fechaFin : undefined,
 		});
 	};
 
-	const columns: ColumnsType<InvoiceInfo> = [
+	const baseColumns: ColumnsType<InvoiceInfo> = [
 		{
 			title: t("sys.nav.inventory.invoice.code"),
 			dataIndex: "codigo_interno",
@@ -161,37 +218,41 @@ export default function InvoicePage() {
 				</Badge>
 			),
 		},
-		{
-			title: t("sys.nav.inventory.invoice.actions"),
-			key: "operation",
-			width: 120,
-			align: "center",
-			render: (_, record) => (
-				<div className="flex w-full justify-center text-gray-500">
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => {
-							// Guardar ID seleccionado en store global y navegar
-							setSelectedInvoiceId(record.id);
-							push(`${pathname}/${record.id}`);
-						}}
-					>
-						<Icon icon="mdi:card-account-details" size={18} />
-					</Button>
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => handleEdit(record)}
-						disabled={record.estado !== "BORRADOR"}
-						title={record.estado !== "BORRADOR" ? "Solo se pueden editar facturas en estado BORRADOR" : "Editar factura"}
-					>
-						<Icon icon="solar:pen-bold-duotone" size={18} />
-					</Button>
-				</div>
-			),
-		},
 	];
+	const columns: ColumnsType<InvoiceInfo> = canWrite
+		? [
+				...baseColumns,
+				{
+					title: t("sys.nav.inventory.invoice.actions"),
+					key: "operation",
+					width: 120,
+					align: "center",
+					render: (_, record) => (
+						<div className="flex w-full justify-center text-gray-500">
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => {
+									setSelectedInvoiceId(record.id);
+									push(`${pathname}/${record.id}`);
+								}}
+							>
+								<Icon icon="mdi:card-account-details" size={18} />
+							</Button>
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => handleEdit(record)}
+								disabled={record.estado !== "BORRADOR"}
+								title={record.estado !== "BORRADOR" ? "Solo se pueden editar facturas en estado BORRADOR" : "Editar factura"}
+							>
+								<Icon icon="solar:pen-bold-duotone" size={18} />
+							</Button>
+						</div>
+					),
+				},
+			]
+		: baseColumns;
 
 	// Validar y normalizar datos recibidos del backend
 	const validatedInvoices = invoices
@@ -242,52 +303,120 @@ export default function InvoicePage() {
 				<CardHeader>
 					<div className="flex items-center justify-between">
 						<div>{t("sys.nav.inventory.invoice.index")}</div>
-						<div className="flex gap-2 items-center">
-							<Select
-								value={estadoFilter ?? "todos"}
-								onValueChange={(value) => {
-									setEstadoFilter(value === "todos" ? undefined : (value as InvoiceInfo["estado"]));
-								}}
-							>
-								<SelectTrigger className="w-56">
-									<SelectValue placeholder={t("sys.nav.inventory.invoice.status.index")} />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">{t("sys.nav.inventory.invoice.status.all")}</SelectItem>
-									<SelectItem value="BORRADOR">{t("sys.nav.inventory.invoice.status.borrador")}</SelectItem>
-									<SelectItem value="CONFIRMADA">{t("sys.nav.inventory.invoice.status.confirmada")}</SelectItem>
-									<SelectItem value="ANULADA">{t("sys.nav.inventory.invoice.status.anulada")}</SelectItem>
-								</SelectContent>
-							</Select>
-							<Button
-								onClick={() => {
-									setProcessError(null);
-									setIsEditing(false);
-									setProcessedData({
-										codigo_interno: "",
-										concepto: "",
-										fecha_movimiento: "",
-										total: 0,
-										observaciones: "",
-										productos: [],
-									});
-									setProcessEditOpen(true);
-								}}
-							>
-								<Icon icon="solar:add-circle-bold-duotone" className="mr-2" />
-								{t("sys.nav.inventory.invoice.new")}
-							</Button>
-							<Button onClick={() => setCameraOpen(true)}>
-								<Icon icon="solar:scan-bold-duotone" className="mr-2" />
-								{t("sys.nav.inventory.invoice.scan")}
-							</Button>
+						<div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+							{/* Búsqueda */}
+							<div className="flex items-center gap-2 w-full sm:w-64">
+								<label htmlFor="invoice-search" className="sr-only">
+									Buscar facturas
+								</label>
+								<Input
+									id="invoice-search"
+									aria-label="Buscar facturas"
+									placeholder="Buscar facturas..."
+									value={searchText}
+									onChange={(e) => setSearchText(e.target.value)}
+									className="w-full"
+								/>
+							</div>
+							{!isReadOnly && (
+								<Select
+									value={estadoFilter ?? "todos"}
+									onValueChange={(value) => {
+										setEstadoFilter(value === "todos" ? undefined : (value as InvoiceInfo["estado"]));
+									}}
+								>
+									<SelectTrigger className="w-full sm:w-56" aria-label={t("sys.nav.inventory.invoice.status.index")}>
+										<SelectValue placeholder={t("sys.nav.inventory.invoice.status.index")} />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">{t("sys.nav.inventory.invoice.status.all")}</SelectItem>
+										<SelectItem value="BORRADOR">{t("sys.nav.inventory.invoice.status.borrador")}</SelectItem>
+										<SelectItem value="CONFIRMADA">{t("sys.nav.inventory.invoice.status.confirmada")}</SelectItem>
+										<SelectItem value="ANULADA">{t("sys.nav.inventory.invoice.status.anulada")}</SelectItem>
+									</SelectContent>
+								</Select>
+							)}
+
+							{/* Filtros de fecha */}
+							<div className="flex items-center gap-2 w-full sm:w-auto">
+								<div className="flex items-center gap-2 w-full sm:w-44">
+									<label htmlFor="fecha-inicio" className="sr-only">
+										Fecha inicio
+									</label>
+									<Input
+										id="fecha-inicio"
+										type="date"
+										aria-label="Fecha inicio"
+										value={fechaInicio}
+										onChange={(e) => setFechaInicio(e.target.value)}
+										className="w-full"
+										aria-invalid={Boolean(dateError)}
+									/>
+								</div>
+								<div className="flex items-center gap-2 w-full sm:w-44">
+									<label htmlFor="fecha-fin" className="sr-only">
+										Fecha fin
+									</label>
+									<Input
+										id="fecha-fin"
+										type="date"
+										aria-label="Fecha fin"
+										value={fechaFin}
+										onChange={(e) => setFechaFin(e.target.value)}
+										className="w-full"
+										aria-invalid={Boolean(dateError)}
+									/>
+								</div>
+								{dateError && (
+									<Badge variant="destructive" aria-live="polite">
+										{dateError}
+									</Badge>
+								)}
+							</div>
+							{!isReadOnly && (
+								<Button
+									onClick={() => {
+										setProcessError(null);
+										setIsEditing(false);
+										setProcessedData({
+											codigo_interno: "",
+											concepto: "",
+											fecha_movimiento: "",
+											total: 0,
+											observaciones: "",
+											productos: [],
+										});
+										setProcessEditOpen(true);
+									}}
+								>
+									<Icon icon="solar:add-circle-bold-duotone" className="mr-2" />
+									{t("sys.nav.inventory.invoice.new")}
+								</Button>
+							)}
+							{!isReadOnly && (
+								<Button onClick={() => setCameraOpen(true)}>
+									<Icon icon="solar:scan-bold-duotone" className="mr-2" />
+									{t("sys.nav.inventory.invoice.scan")}
+								</Button>
+							)}
 							{error && (
 								<div className="flex items-center gap-2 ml-2">
 									<Badge variant="error">Error: {error}</Badge>
 									<Button
 										variant="outline"
 										size="sm"
-										onClick={() => fetchInvoices({ page: pagination.current, limit: pagination.pageSize, estado: estadoFilter })}
+										onClick={() => {
+											const normalizedLen = debouncedSearch.replace(/\s+/g, "").length;
+											const searchParam = normalizedLen >= 3 ? debouncedSearch.trim() : undefined;
+											fetchInvoices({
+												page: pagination.current,
+												limit: pagination.pageSize,
+												estado: estadoFilter,
+												search: searchParam,
+												fecha_inicio: isValidDateStr(fechaInicio) ? fechaInicio : undefined,
+												fecha_fin: isValidDateStr(fechaFin) ? fechaFin : undefined,
+											});
+										}}
 									>
 										Reintentar
 									</Button>
@@ -387,7 +516,18 @@ export default function InvoicePage() {
 								setProcessEditOpen(false);
 								setProcessedData(null);
 								setIsEditing(false);
-								await fetchInvoices({ page: pagination.current, limit: pagination.pageSize, estado: estadoFilter });
+								{
+									const normalizedLen = debouncedSearch.replace(/\s+/g, "").length;
+									const searchParam = normalizedLen >= 3 ? debouncedSearch.trim() : undefined;
+									await fetchInvoices({
+										page: pagination.current,
+										limit: pagination.pageSize,
+										estado: estadoFilter,
+										search: searchParam,
+										fecha_inicio: isValidDateStr(fechaInicio) ? fechaInicio : undefined,
+										fecha_fin: isValidDateStr(fechaFin) ? fechaFin : undefined,
+									});
+								}
 							} else {
 								setProcessError(res.message || (isEditing ? "Error al actualizar la factura" : "Error al crear la factura"));
 							}

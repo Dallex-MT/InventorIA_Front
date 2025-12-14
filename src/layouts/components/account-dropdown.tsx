@@ -1,3 +1,4 @@
+import productService from "@/api/services/productService";
 import userService from "@/api/services/userService";
 import { useLoginStateContext } from "@/pages/sys/login/providers/login-provider";
 import { useRouter } from "@/routes/hooks";
@@ -31,6 +32,7 @@ export default function AccountDropdown() {
 			// Si es exitosa (200 OK), limpiar datos del usuario
 			if (response.success) {
 				clearUserInfoAndToken();
+				productService.clearUnitMeasuresCache();
 				toast.success(response.message || "Sesión cerrada exitosamente", {
 					position: "top-center",
 				});

@@ -21,14 +21,17 @@ export const frontendNavData: NavProps["data"] = [
 				title: "sys.nav.management",
 				path: "/management",
 				icon: <Icon icon="local:ic-management" size="24" />,
+				auth: [1],
 				children: [
 					{
 						title: "sys.nav.system.role.index",
 						path: "/management/system/role",
+						auth: [1],
 					},
 					{
 						title: "sys.nav.user.index",
 						path: "/management/system/user",
+						auth: [1],
 					},
 				],
 			},

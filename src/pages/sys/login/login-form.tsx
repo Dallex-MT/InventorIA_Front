@@ -56,10 +56,10 @@ export function LoginForm({ className, ...props }: React.ComponentPropsWithoutRe
 					<FormField
 						control={form.control}
 						name="correo"
-						rules={{ required: t("sys.login.accountPlaceholder") }}
+						rules={{ required: t("sys.login.emailPlaceholder") }}
 						render={({ field }) => (
 							<FormItem>
-								<FormLabel>{t("sys.login.userName")}</FormLabel>
+								<FormLabel>{t("sys.login.email")}</FormLabel>
 								<FormControl>
 									<Input placeholder="usuario@ejemplo.com" {...field} />
 								</FormControl>

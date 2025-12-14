@@ -10,7 +10,7 @@ export type NavItemDataProps = {
 	icon?: string | React.ReactNode;
 	info?: React.ReactNode;
 	caption?: string;
-	auth?: string[];
+	auth?: Array<string | number>;
 	children?: NavItemDataProps[];
 	disabled?: boolean;
 	hidden?: boolean;

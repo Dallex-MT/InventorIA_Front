@@ -13,9 +13,11 @@ export interface PaginatedCategoriesRes {
 	message: string;
 	data: {
 		categories: CategoryInfo[];
-		total: number;
-		page: number;
-		totalPages: number;
+		pagination: {
+			total: number;
+			page: number;
+			totalPages: number;
+		};
 	};
 }
 

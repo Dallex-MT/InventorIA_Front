@@ -1,6 +1,5 @@
 import type { NavItemDataProps } from "@/components/nav/types";
 import { useUserPermissions } from "@/store/userStore";
-import { checkAny } from "@/utils";
 import { useMemo } from "react";
 import { frontendNavData } from "./nav-data-frontend";
 
@@ -13,23 +12,31 @@ const navData = ROUTER_MODE === "backend" ? frontendNavData : frontendNavData;
  * @param permissions 权限列表
  * @returns 过滤后的导航项目数组
  */
-const filterItems = (items: NavItemDataProps[], permissions: string[]) => {
-	return items.filter((item) => {
-		// 检查当前项目是否有权限
-		const hasPermission = item.auth ? checkAny(item.auth, permissions) : true;
+const hasAccess = (auth: Array<string | number> | undefined, permissions: Array<string | number>) => {
+	if (!auth || auth.length === 0) return true;
+	if (!permissions || permissions.length === 0) return false;
+	const permsAreNumbers = typeof permissions[0] === "number";
+	if (permsAreNumbers) {
+		const permNums = permissions.map((p) => (typeof p === "number" ? p : Number(p))).filter((n) => !Number.isNaN(n));
+		const authNums = auth.map((a) => (typeof a === "number" ? a : Number(a))).filter((n) => !Number.isNaN(n));
+		return authNums.some((n) => permNums.includes(n));
+	}
+	const permStrings = permissions.map((p) => String(p));
+	const authStrings = auth.map((a) => String(a));
+	return authStrings.some((a) => permStrings.includes(a));
+};
 
-		// 如果有子项目，递归处理
+const filterItems = (items: NavItemDataProps[], permissions: Array<string | number>) => {
+	return items.filter((item) => {
+		const allowed = hasAccess(item.auth, permissions);
 		if (item.children?.length) {
 			const filteredChildren = filterItems(item.children, permissions);
-			// 如果子项目都被过滤掉了，则过滤掉当前项目
-			if (filteredChildren.length === 0) {
+			if (filteredChildren.length === 0 && !allowed) {
 				return false;
 			}
-			// 更新子项目
 			item.children = filteredChildren;
 		}
-
-		return hasPermission;
+		return allowed;
 	});
 };
 
@@ -38,7 +45,7 @@ const filterItems = (items: NavItemDataProps[], permissions: string[]) => {
  * @param permissions 权限列表
  * @returns 过滤后的导航数据
  */
-const filterNavData = (permissions: string[]) => {
+const filterNavData = (permissions: Array<string | number>) => {
 	return navData
 		.map((group) => {
 			// 过滤组内的项目
@@ -63,8 +70,9 @@ const filterNavData = (permissions: string[]) => {
  * @returns Filtered navigation data
  */
 export const useFilteredNavData = () => {
-	const permissions = useUserPermissions();
-	const permissionCodes = useMemo(() => permissions.map((p) => p.code), [permissions]);
-	const filteredNavData = useMemo(() => filterNavData(permissionCodes), [permissionCodes]);
+	const permissions = useUserPermissions() as Array<number>;
+	const filteredNavData = useMemo(() => {
+		return filterNavData(permissions);
+	}, [permissions]);
 	return filteredNavData;
 };

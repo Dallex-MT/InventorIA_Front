@@ -1,6 +1,7 @@
 import categoryService, { type QueryParams } from "@/api/services/categoryService";
 import { Icon } from "@/components/icon";
 import useLocale from "@/locales/use-locale";
+import { usePermissionFlags } from "@/store/userStore";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
@@ -14,6 +15,7 @@ import { type CategoryEditFormValues, CategoryEditModal } from "./category-modal
 
 export default function CategoryPage() {
 	const { t } = useLocale();
+	const { isReadOnly, canWrite } = usePermissionFlags();
 
 	const [categories, setCategories] = useState<CategoryInfo[]>([]);
 	const [loading, setLoading] = useState(false);
@@ -23,7 +25,7 @@ export default function CategoryPage() {
 		pageSize: 10,
 		total: 0,
 	});
-	const [activoFilter, setActivoFilter] = useState<boolean | undefined>(undefined);
+	const [activoFilter, setActivoFilter] = useState<boolean | undefined>(isReadOnly ? true : undefined);
 
 	// Estados para edición de categoría
 	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -39,9 +41,9 @@ export default function CategoryPage() {
 			if (response?.data?.categories && Array.isArray(response.data.categories)) {
 				setCategories(response.data.categories);
 				setPagination({
-					current: response.data.page || params.page,
+					current: response.data.pagination.page || params.page,
 					pageSize: params.limit,
-					total: response.data.total || 0,
+					total: response.data.pagination.total || 0,
 				});
 			} else {
 				console.error("Estructura de respuesta inválida:", response);
@@ -72,7 +74,7 @@ export default function CategoryPage() {
 		});
 	};
 
-	const columns: ColumnsType<CategoryInfo> = [
+	const baseColumns: ColumnsType<CategoryInfo> = [
 		{
 			title: t("sys.nav.inventory.category.name"),
 			dataIndex: "nombre",
@@ -102,28 +104,33 @@ export default function CategoryPage() {
 			width: 150,
 			render: (fecha) => new Date(fecha).toLocaleDateString(),
 		},
-		{
-			title: t("sys.nav.inventory.category.actions"),
-			key: "operation",
-			align: "center",
-			width: 120,
-			render: (_, record) => (
-				<div className="flex w-full justify-center text-gray-500">
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => {
-							setEditingCategory(record);
-							setEditError(null);
-							setIsEditModalOpen(true);
-						}}
-					>
-						<Icon icon="solar:pen-bold-duotone" size={18} />
-					</Button>
-				</div>
-			),
-		},
 	];
+	const columns: ColumnsType<CategoryInfo> = canWrite
+		? [
+				...baseColumns,
+				{
+					title: t("sys.nav.inventory.category.actions"),
+					key: "operation",
+					align: "center",
+					width: 120,
+					render: (_, record) => (
+						<div className="flex w-full justify-center text-gray-500">
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => {
+									setEditingCategory(record);
+									setEditError(null);
+									setIsEditModalOpen(true);
+								}}
+							>
+								<Icon icon="solar:pen-bold-duotone" size={18} />
+							</Button>
+						</div>
+					),
+				},
+			]
+		: baseColumns;
 
 	// Validar y normalizar datos recibidos del backend
 	const validatedCategories = categories
@@ -159,31 +166,35 @@ export default function CategoryPage() {
 				<div className="flex items-center justify-between">
 					<div>{t("sys.nav.inventory.category.title")}</div>
 					<div className="flex items-center gap-4">
-						<Select
-							value={activoFilter === undefined ? "todos" : activoFilter.toString()}
-							onValueChange={(value) => {
-								setActivoFilter(value === "todos" ? undefined : value === "true");
-							}}
-						>
-							<SelectTrigger className="w-40">
-								<SelectValue placeholder={t("sys.nav.inventory.category.status.index") as string} />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="todos">Todos</SelectItem>
-								<SelectItem value="true">{t("sys.nav.inventory.category.status.active")}</SelectItem>
-								<SelectItem value="false">{t("sys.nav.inventory.category.status.inactive")}</SelectItem>
-							</SelectContent>
-						</Select>
-						<Button
-							onClick={() => {
-								// Abrir modal en modo creación
-								setEditingCategory(null);
-								setEditError(null);
-								setIsEditModalOpen(true);
-							}}
-						>
-							{t("sys.nav.inventory.category.new")}
-						</Button>
+						{!isReadOnly && (
+							<Select
+								value={activoFilter === undefined ? "todos" : activoFilter.toString()}
+								onValueChange={(value) => {
+									setActivoFilter(value === "todos" ? undefined : value === "true");
+								}}
+							>
+								<SelectTrigger className="w-40">
+									<SelectValue placeholder={t("sys.nav.inventory.category.status.index") as string} />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="todos">Todos</SelectItem>
+									<SelectItem value="true">{t("sys.nav.inventory.category.status.active")}</SelectItem>
+									<SelectItem value="false">{t("sys.nav.inventory.category.status.inactive")}</SelectItem>
+								</SelectContent>
+							</Select>
+						)}
+						{!isReadOnly && (
+							<Button
+								onClick={() => {
+									// Abrir modal en modo creación
+									setEditingCategory(null);
+									setEditError(null);
+									setIsEditModalOpen(true);
+								}}
+							>
+								{t("sys.nav.inventory.category.new")}
+							</Button>
+						)}
 						{error && (
 							<div className="flex items-center gap-2">
 								<Badge variant="error">Error: {error}</Badge>

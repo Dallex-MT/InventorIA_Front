@@ -2,6 +2,7 @@ import categoryService from "@/api/services/categoryService";
 import productService, { type QueryParams } from "@/api/services/productService";
 import { Icon } from "@/components/icon";
 import useLocale from "@/locales/use-locale";
+import { usePermissionFlags } from "@/store/userStore";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
@@ -15,6 +16,7 @@ import { type ProductEditFormValues, ProductEditModal } from "./product-modal";
 
 export default function ProductPage() {
 	const { t } = useLocale();
+	const { isReadOnly, canWrite } = usePermissionFlags();
 
 	const [products, setProducts] = useState<ProductInfo[]>([]);
 	const [categories, setCategories] = useState<{ id: number; label: string }[]>([]);
@@ -26,7 +28,7 @@ export default function ProductPage() {
 		pageSize: 10,
 		total: 0,
 	});
-	const [activoFilter, setActivoFilter] = useState<boolean | undefined>(undefined);
+	const [activoFilter, setActivoFilter] = useState<boolean | undefined>(isReadOnly ? true : undefined);
 	const [searchText, setSearchText] = useState("");
 	const [unidadMedidaFilter, setUnidadMedidaFilter] = useState<string | undefined>(undefined);
 	const [categoriaFilter, setCategoriaFilter] = useState<number | undefined>(undefined);
@@ -85,9 +87,9 @@ export default function ProductPage() {
 			if (response?.data?.products && Array.isArray(response.data.products)) {
 				setProducts(response.data.products);
 				setPagination({
-					current: response.data.page || params.page,
+					current: response.data.pagination.current || params.page,
 					pageSize: params.limit,
-					total: response.data.total || 0,
+					total: response.data.pagination.total || 0,
 				});
 			} else {
 				console.error("Estructura de respuesta inválida:", response);
@@ -124,7 +126,7 @@ export default function ProductPage() {
 		applyFilters(newPagination.current || 1, newPagination.pageSize || pagination.pageSize);
 	};
 
-	const columns: ColumnsType<ProductInfo> = [
+	const baseColumns: ColumnsType<ProductInfo> = [
 		{
 			title: t("sys.nav.inventory.product.name"),
 			dataIndex: "nombre",
@@ -134,7 +136,13 @@ export default function ProductPage() {
 			title: t("sys.nav.inventory.product.description"),
 			dataIndex: "descripcion",
 			width: 200,
-			ellipsis: true,
+			render: (text: string) => {
+				const maxLength = 75;
+				if (text.length > maxLength) {
+					return `${text.substring(0, maxLength)}...`;
+				}
+				return text;
+			},
 		},
 		{
 			title: t("sys.nav.inventory.product.stock.current"),
@@ -162,6 +170,7 @@ export default function ProductPage() {
 			dataIndex: "unidad_medida",
 			align: "center",
 			width: 100,
+			render: (u: ProductInfo["unidad_medida"]) => (u?.abreviatura || u?.nombre || "-").toString(),
 		},
 		{
 			title: t("sys.nav.inventory.product.status.index"),
@@ -174,28 +183,33 @@ export default function ProductPage() {
 				</Badge>
 			),
 		},
-		{
-			title: t("sys.nav.inventory.product.actions"),
-			key: "operation",
-			align: "center",
-			width: 120,
-			render: (_, record) => (
-				<div className="flex w-full justify-center text-gray-500">
-					<Button
-						variant="ghost"
-						size="icon"
-						onClick={() => {
-							setEditingProduct(record);
-							setEditError(null);
-							setIsEditModalOpen(true);
-						}}
-					>
-						<Icon icon="solar:pen-bold-duotone" size={18} />
-					</Button>
-				</div>
-			),
-		},
 	];
+	const columns: ColumnsType<ProductInfo> = canWrite
+		? [
+				...baseColumns,
+				{
+					title: t("sys.nav.inventory.product.actions"),
+					key: "operation",
+					align: "center",
+					width: 120,
+					render: (_, record) => (
+						<div className="flex w-full justify-center text-gray-500">
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={() => {
+									setEditingProduct(record);
+									setEditError(null);
+									setIsEditModalOpen(true);
+								}}
+							>
+								<Icon icon="solar:pen-bold-duotone" size={18} />
+							</Button>
+						</div>
+					),
+				},
+			]
+		: baseColumns;
 
 	// Validar y normalizar datos recibidos del backend
 	const validatedProducts = products
@@ -222,7 +236,12 @@ export default function ProductPage() {
 				nombre: String(p.nombre),
 				descripcion: String(p.descripcion ?? ""),
 				categoria_id: Number(p.categoria_id),
-				unidad_medida: String(p.unidad_medida),
+				unidad_medida: {
+					id: Number((p as any).unidad_medida?.id ?? 0),
+					nombre: String((p as any).unidad_medida?.nombre ?? ""),
+					abreviatura: String((p as any).unidad_medida?.abreviatura ?? ""),
+					activo: Number((p as any).unidad_medida?.activo ?? 1),
+				},
 				stock_actual: Number(p.stock_actual),
 				stock_minimo: Number(p.stock_minimo),
 				precio_referencia: Number(p.precio_referencia),
@@ -333,35 +352,39 @@ export default function ProductPage() {
 								</SelectContent>
 							</Select>
 						</div>
-						<div className="flex flex-col gap-1">
-							<div className="text-xs font-medium text-muted-foreground">Estado</div>
-							<Select
-								value={activoFilter === undefined ? "todos" : activoFilter.toString()}
-								onValueChange={(value) => {
-									setActivoFilter(value === "todos" ? undefined : value === "true");
-									applyFilters(1, pagination.pageSize);
+						{!isReadOnly && (
+							<div className="flex flex-col gap-1">
+								<div className="text-xs font-medium text-muted-foreground">Estado</div>
+								<Select
+									value={activoFilter === undefined ? "todos" : activoFilter.toString()}
+									onValueChange={(value) => {
+										setActivoFilter(value === "todos" ? undefined : value === "true");
+										applyFilters(1, pagination.pageSize);
+									}}
+								>
+									<SelectTrigger className="w-40">
+										<SelectValue placeholder={t("sys.nav.inventory.product.status.index") as string} />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="todos">Todos</SelectItem>
+										<SelectItem value="true">{t("sys.nav.inventory.product.status.active")}</SelectItem>
+										<SelectItem value="false">{t("sys.nav.inventory.product.status.inactive")}</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+						{!isReadOnly && (
+							<Button
+								onClick={() => {
+									// Abrir modal en modo creación
+									setEditingProduct(null);
+									setEditError(null);
+									setIsEditModalOpen(true);
 								}}
 							>
-								<SelectTrigger className="w-40">
-									<SelectValue placeholder={t("sys.nav.inventory.product.status.index") as string} />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="todos">Todos</SelectItem>
-									<SelectItem value="true">{t("sys.nav.inventory.product.status.active")}</SelectItem>
-									<SelectItem value="false">{t("sys.nav.inventory.product.status.inactive")}</SelectItem>
-								</SelectContent>
-							</Select>
-						</div>
-						<Button
-							onClick={() => {
-								// Abrir modal en modo creación
-								setEditingProduct(null);
-								setEditError(null);
-								setIsEditModalOpen(true);
-							}}
-						>
-							{t("sys.nav.inventory.product.new")}
-						</Button>
+								{t("sys.nav.inventory.product.new")}
+							</Button>
+						)}
 						{error && (
 							<div className="flex items-center gap-2">
 								<Badge variant="error">Error: {error}</Badge>
@@ -400,7 +423,7 @@ export default function ProductPage() {
 						nombre: editingProduct?.nombre ?? "",
 						descripcion: editingProduct?.descripcion ?? "",
 						categoria_id: Number(editingProduct?.categoria_id ?? 0),
-						unidad_medida: String(editingProduct?.unidad_medida ?? ""),
+						unidad_medida_id: Number(editingProduct?.unidad_medida?.id ?? 0),
 						stock_actual: Number(editingProduct?.stock_actual ?? 0),
 						stock_minimo: Number(editingProduct?.stock_minimo ?? 0),
 						precio_referencia: Number(editingProduct?.precio_referencia ?? 0),
@@ -424,7 +447,7 @@ export default function ProductPage() {
 									nombre: values.nombre,
 									descripcion: values.descripcion,
 									categoria_id: values.categoria_id,
-									unidad_medida: values.unidad_medida,
+									unidad_medida_id: values.unidad_medida_id,
 									stock_actual: values.stock_actual,
 									stock_minimo: values.stock_minimo,
 									precio_referencia: values.precio_referencia,
@@ -446,7 +469,7 @@ export default function ProductPage() {
 									nombre: values.nombre,
 									descripcion: values.descripcion,
 									categoria_id: values.categoria_id,
-									unidad_medida: values.unidad_medida,
+									unidad_medida_id: values.unidad_medida_id,
 									stock_actual: values.stock_actual,
 									stock_minimo: values.stock_minimo,
 									precio_referencia: values.precio_referencia,

@@ -1,4 +1,4 @@
-import { getConsumptionReport, getFinancialReport, getInventoryReport, getRotationReport, getValuationReport } from "@/api/services/reportService";
+import { getFinancialReport, getInventoryReport, getRotationReport, getValuationReport } from "@/api/services/reportService";
 import glass_bag from "@/assets/images/glass/ic_glass_bag.png";
 import glass_buy from "@/assets/images/glass/ic_glass_buy.png";
 import glass_message from "@/assets/images/glass/ic_glass_message.png";
@@ -13,7 +13,6 @@ import BannerCard from "./banner-card";
 
 function Workbench() {
 	const [inventory, setInventory] = useState<Awaited<ReturnType<typeof getInventoryReport>> | null>(null);
-	const [consumption, setConsumption] = useState<Awaited<ReturnType<typeof getConsumptionReport>> | null>(null);
 	const [financial, setFinancial] = useState<Awaited<ReturnType<typeof getFinancialReport>> | null>(null);
 	const [rotation, setRotation] = useState<Awaited<ReturnType<typeof getRotationReport>> | null>(null);
 	const [valuation, setValuation] = useState<Awaited<ReturnType<typeof getValuationReport>> | null>(null);
@@ -30,16 +29,14 @@ function Workbench() {
 		let mounted = true;
 		const fetchAll = async () => {
 			try {
-				const [inv, cons, fin, rot, val] = await Promise.all([
+				const [inv, fin, rot, val] = await Promise.all([
 					getInventoryReport(),
-					getConsumptionReport(filters),
 					getFinancialReport(filters),
 					getRotationReport(filters),
 					getValuationReport(filters),
 				]);
 				if (!mounted) return;
 				setInventory(inv);
-				setConsumption(cons);
 				setFinancial(fin);
 				setRotation(rot);
 				setValuation(val);
@@ -68,20 +65,8 @@ function Workbench() {
 
 	const financialCategories = financial?.monthlyComparison?.map((m) => m.month) ?? [];
 	const financialSeries = [{ name: "Gasto", data: financial?.monthlyComparison?.map((m) => m.total) ?? [] }];
-
-	const consumptionTop = useMemo(() => {
-		const list = [...(consumption?.products ?? [])].sort((a, b) => b.quantity_consumed - a.quantity_consumed);
-		const top = list.slice(0, 5);
-		const rest = list.slice(5);
-		const restTotal = rest.reduce((sum, p) => sum + p.quantity_consumed, 0);
-		const labels = top.map((p) => p.product_name);
-		const series = top.map((p) => p.quantity_consumed);
-		if (restTotal > 0) {
-			labels.push("Otros");
-			series.push(restTotal);
-		}
-		return { labels, series };
-	}, [consumption]);
+	const statusLabels = (financial?.statusDistribution ?? []).map((s) => s.status);
+	const statusSeries = (financial?.statusDistribution ?? []).map((s) => s.count);
 
 	const topHighCategories = rotation?.topHighRotation.map((r) => r.product_name) ?? [];
 	const topHighSeries = [{ name: "Rotación", data: rotation?.topHighRotation.map((r) => Number(r.rotation_rate.toFixed(2))) ?? [] }];
@@ -108,8 +93,8 @@ function Workbench() {
 				/>
 				<AnalysisCard
 					cover={glass_buy}
-					title={fCurrency(financial?.totalSpent ?? 0)}
-					subtitle="Gasto período"
+					title={`${financial?.invoiceCount ?? 0}`}
+					subtitle="Facturas período"
 					style={{ color: themeVars.colors.palette.warning.dark, backgroundColor: `rgba(${themeVars.colors.palette.warning.defaultChannel} / .2)` }}
 				/>
 				<AnalysisCard
@@ -147,10 +132,10 @@ function Workbench() {
 				</Card>
 				<Card>
 					<CardHeader>
-						<CardTitle>Distribución de consumo</CardTitle>
+						<CardTitle>Estado de facturas</CardTitle>
 					</CardHeader>
 					<CardContent>
-						<PieChart series={consumptionTop.series} labels={consumptionTop.labels} />
+						<DonutChart series={statusSeries} labels={statusLabels} />
 					</CardContent>
 				</Card>
 				<Card>
@@ -201,11 +186,6 @@ function DonutChart({ series, labels }: { series: number[]; labels: string[] }) 
 		plotOptions: { pie: { donut: { size: "90%" } } },
 	});
 	return <Chart type="donut" series={series} options={options} height={360} />;
-}
-
-function PieChart({ series, labels }: { series: number[]; labels: string[] }) {
-	const options = useChart({ labels, legend: { position: "bottom", horizontalAlign: "center" }, tooltip: { fillSeriesColor: false } });
-	return <Chart type="pie" series={series} options={options} height={360} />;
 }
 
 export default Workbench;

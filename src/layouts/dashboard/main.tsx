@@ -18,9 +18,13 @@ const { VITE_APP_ROUTER_MODE: ROUTER_MODE } = import.meta.env;
  * @param path
  * @returns
  */
-function findAuthByPath(path: string): string[] {
-	const foundItem = allItems.find((item) => item.path === path);
-	return foundItem?.auth || [];
+function findAuthByPath(path: string): Array<string | number> {
+	const exact = allItems.find((item) => item.path === path);
+	if (exact) return (exact.auth as Array<string | number>) || [];
+	const candidates = allItems
+		.filter((item) => typeof item.path === "string" && path.startsWith(item.path))
+		.sort((a, b) => String(b.path).length - String(a.path).length);
+	return (candidates[0]?.auth as Array<string | number>) || [];
 }
 
 const navData = ROUTER_MODE === "frontend" ? clone(frontendNavData) : frontendNavData;

@@ -7,6 +7,7 @@ export interface ReportFilters {
 	endDate?: string;
 	categoria_id?: number;
 	estado?: "BORRADOR" | "CONFIRMADA" | "ANULADA";
+	search?: string;
 }
 
 export interface InventoryReport {
@@ -40,6 +41,9 @@ export interface FinancialReport {
 		month: string;
 		total: number;
 	}>;
+	invoiceCount: number;
+	averageMonthlySpend?: number;
+	statusDistribution?: Array<{ status: "BORRADOR" | "CONFIRMADA" | "ANULADA"; count: number; total: number }>;
 }
 
 export interface RotationReport {
@@ -77,6 +81,7 @@ export async function getInventoryReport(filters?: ReportFilters): Promise<Inven
 			page: 1,
 			limit: 1000, // Obtener todos los productos
 			categoria_id: filters?.categoria_id,
+			search: filters?.search?.trim() || undefined,
 		});
 
 		if (!response?.data?.products) {
@@ -128,6 +133,9 @@ export async function getConsumptionReport(filters: ReportFilters): Promise<Cons
 			page: 1,
 			limit: 1000,
 			estado: filters.estado || "CONFIRMADA",
+			search: filters.search?.trim() || undefined,
+			fecha_inicio: filters.startDate,
+			fecha_fin: filters.endDate,
 		});
 
 		if (!invoicesResponse?.data?.invoices) {
@@ -205,6 +213,9 @@ export async function getFinancialReport(filters: ReportFilters): Promise<Financ
 			page: 1,
 			limit: 1000,
 			estado: filters.estado || "CONFIRMADA",
+			search: filters.search?.trim() || undefined,
+			fecha_inicio: filters.startDate,
+			fecha_fin: filters.endDate,
 		});
 
 		if (!invoicesResponse?.data?.invoices) {
@@ -212,22 +223,16 @@ export async function getFinancialReport(filters: ReportFilters): Promise<Financ
 				period: filters.startDate && filters.endDate ? `${filters.startDate} - ${filters.endDate}` : "Todos",
 				totalSpent: 0,
 				byCategory: [],
+				invoiceCount: 0,
 			};
 		}
 
 		// Filtrar por fecha
-		let invoices = invoicesResponse.data.invoices;
-		if (filters.startDate && filters.endDate) {
-			invoices = invoices.filter((inv) => {
-				const invDate = new Date(inv.fecha_movimiento);
-				const start = new Date(filters.startDate || "");
-				const end = new Date(filters.endDate || "");
-				return invDate >= start && invDate <= end;
-			});
-		}
+		const invoices = invoicesResponse.data.invoices;
 
 		// Calcular total gastado
 		const totalSpent = invoices.reduce((sum, inv) => sum + inv.total, 0);
+		const invoiceCount = invoices.length;
 
 		// Agrupar por categoría (simplificado - en producción debería venir del backend)
 		const byCategory: Array<{ category_id: number; category_name: string; total: number }> = [];
@@ -248,11 +253,49 @@ export async function getFinancialReport(filters: ReportFilters): Promise<Financ
 			.map(([month, total]) => ({ month, total }))
 			.sort((a, b) => a.month.localeCompare(b.month));
 
+		let averageMonthlySpend: number | undefined;
+		if (monthlyComparison.length > 0) {
+			const sum = monthlyComparison.reduce((acc, m) => acc + m.total, 0);
+			averageMonthlySpend = sum / monthlyComparison.length;
+		}
+
+		// Distribución por estado dentro del rango de fechas (ignorando filtro de estado)
+		let statusDistribution: Array<{ status: "BORRADOR" | "CONFIRMADA" | "ANULADA"; count: number; total: number }> | undefined;
+		try {
+			const allStatusRes = await invoiceService.getInvoices({
+				page: 1,
+				limit: 1000,
+				fecha_inicio: filters.startDate,
+				fecha_fin: filters.endDate,
+				search: filters.search?.trim() || undefined,
+			});
+			const list = allStatusRes?.data?.invoices || [];
+			const agg = new Map<string, { count: number; total: number }>();
+			for (const inv of list) {
+				const key = String(inv.estado);
+				const cur = agg.get(key) || { count: 0, total: 0 };
+				cur.count += 1;
+				cur.total += Number(inv.total || 0);
+				agg.set(key, cur);
+			}
+			statusDistribution = ["BORRADOR", "CONFIRMADA", "ANULADA"].map((s) => ({
+				status: s as any,
+				count: agg.get(s)?.count || 0,
+				total: agg.get(s)?.total || 0,
+			}));
+		} catch {
+			// silencioso: mantener compatibilidad
+			statusDistribution = undefined;
+		}
+
 		return {
 			period: filters.startDate && filters.endDate ? `${filters.startDate} - ${filters.endDate}` : "Todos",
 			totalSpent,
 			byCategory,
 			monthlyComparison,
+			invoiceCount,
+			averageMonthlySpend,
+			statusDistribution,
 		};
 	} catch (error) {
 		console.error("Error al obtener reporte financiero:", error);
@@ -269,7 +312,10 @@ export async function getRotationReport(filters?: ReportFilters): Promise<Rotati
 		const invoicesResponse = await invoiceService.getInvoices({
 			page: 1,
 			limit: 1000,
-			estado: "CONFIRMADA",
+			estado: filters?.estado || "CONFIRMADA",
+			fecha_inicio: filters?.startDate,
+			fecha_fin: filters?.endDate,
+			search: filters?.search?.trim() || undefined,
 		});
 
 		if (!invoicesResponse?.data?.invoices) {
@@ -281,15 +327,7 @@ export async function getRotationReport(filters?: ReportFilters): Promise<Rotati
 		}
 
 		// Filtrar por fecha si se proporciona
-		let invoices = invoicesResponse.data.invoices;
-		if (filters?.startDate && filters?.endDate) {
-			invoices = invoices.filter((inv) => {
-				const invDate = new Date(inv.fecha_movimiento);
-				const start = new Date(filters.startDate || "");
-				const end = new Date(filters.endDate || "");
-				return invDate >= start && invDate <= end;
-			});
-		}
+		const invoices = invoicesResponse.data.invoices;
 
 		// Calcular rotación por producto
 		const rotationMap = new Map<number, { name: string; quantity: number; movements: number; lastMovement: Date }>();
@@ -363,7 +401,10 @@ export async function getValuationReport(filters?: ReportFilters): Promise<Valua
 		const invoicesResponse = await invoiceService.getInvoices({
 			page: 1,
 			limit: 1000,
-			estado: "CONFIRMADA",
+			estado: filters?.estado || "CONFIRMADA",
+			fecha_inicio: filters?.startDate,
+			fecha_fin: filters?.endDate,
+			search: filters?.search?.trim() || undefined,
 		});
 
 		const historicalValues: Array<{ date: string; value: number }> = [];

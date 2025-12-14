@@ -81,6 +81,7 @@ export type SignInRes = {
 	success: boolean;
 	message: string;
 	user: UserInfo;
+	permissions?: number[];
 };
 
 export type LogoutRes = {

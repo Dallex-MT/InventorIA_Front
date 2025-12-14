@@ -1,14 +1,13 @@
-import invoiceService, { type InvoiceDetailsRes } from "@/api/services/invoiceService";
-import { Icon } from "@/components/icon";
+import invoiceService from "@/api/services/invoiceService";
 import useLocale from "@/locales/use-locale";
 import { useParams } from "@/routes/hooks";
 import { useInvoiceState } from "@/store/invoiceStore";
 import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
 import { Card, CardContent, CardHeader } from "@/ui/card";
 import { Table } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
+import type { InvoiceInfo } from "#/entity";
 
 type NormalizedInvoiceDetail = {
 	id: number;
@@ -33,22 +32,26 @@ export default function InvoiceDetail() {
 	}, [id, selectedInvoiceId]);
 
 	const [details, setDetails] = useState<NormalizedInvoiceDetail[]>([]);
+	const [invoice, setInvoice] = useState<InvoiceInfo | null>(null);
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	useEffect(() => {
-		const fetchDetails = async () => {
+		const fetchAll = async () => {
 			if (!invoiceId || invoiceId <= 0) {
 				setError("ID de factura inválido o no proporcionado");
 				setDetails([]);
+				setInvoice(null);
 				return;
 			}
 			setLoading(true);
 			setError(null);
 			try {
-				const res: InvoiceDetailsRes = await invoiceService.getInvoiceDetails(invoiceId);
-				if (res.success && Array.isArray(res.data)) {
-					const normalized: NormalizedInvoiceDetail[] = res.data
+				const [resDetails, resInvoice] = await Promise.all([invoiceService.getInvoiceDetails(invoiceId), invoiceService.getInvoiceById(invoiceId)]);
+
+				if (resDetails.success && Array.isArray(resDetails.data)) {
+					const normalized: NormalizedInvoiceDetail[] = resDetails.data
 						.map((d) => ({
 							id: Number(d.id),
 							factura_id: Number(d.factura_id),
@@ -72,18 +75,28 @@ export default function InvoiceDetail() {
 						);
 					setDetails(normalized);
 				} else {
-					setError(res.message || "No se pudieron obtener detalles de la factura");
 					setDetails([]);
 				}
+
+				if (resInvoice.success && resInvoice.data) {
+					const inv = resInvoice.data;
+					const required = [inv.id, inv.codigo_interno, inv.concepto, inv.fecha_movimiento, inv.total, inv.estado];
+					const allPresent = required.every((v) => v !== undefined && v !== null);
+					setInvoice(allPresent ? inv : null);
+					if (!allPresent && !error) setError("Datos de factura incompletos");
+				} else {
+					setInvoice(null);
+				}
 			} catch (e) {
-				setError(e instanceof Error ? e.message : "Error al obtener detalles de la factura");
+				setError(e instanceof Error ? e.message : "Error al obtener datos de la factura");
 				setDetails([]);
+				setInvoice(null);
 			} finally {
 				setLoading(false);
 			}
 		};
 
-		fetchDetails();
+		fetchAll();
 	}, [invoiceId]);
 
 	const columns: ColumnsType<NormalizedInvoiceDetail> = [
@@ -132,27 +145,48 @@ export default function InvoiceDetail() {
 							</div>
 							{error && <Badge variant="error">Error: {error}</Badge>}
 						</div>
-						<div className="flex gap-2">
-							<Button variant="outline" disabled>
-								<Icon icon="solar:pen-bold-duotone" className="mr-2" />
-								{t("sys.nav.inventory.invoice.detail.edit")}
-							</Button>
-							<Button variant="default" disabled>
-								<Icon icon="solar:check-circle-bold-duotone" className="mr-2" />
-								{t("sys.nav.inventory.invoice.detail.confirm")}
-							</Button>
-						</div>
+						{/* <div className="flex gap-2">
+							{canWrite && (
+								<>
+									<Button variant="outline">
+										<Icon icon="solar:pen-bold-duotone" className="mr-2" />
+										{t("sys.nav.inventory.invoice.detail.edit")}
+									</Button>
+									<Button variant="default">
+										<Icon icon="solar:check-circle-bold-duotone" className="mr-2" />
+										{t("sys.nav.inventory.invoice.detail.confirm")}
+									</Button>
+								</>
+							)}
+						</div> */}
 					</div>
 				</CardHeader>
 				<CardContent>
 					<div className="grid grid-cols-2 gap-4 mb-4">
 						<div>
+							<div className="text-sm text-muted-foreground">{t("sys.nav.inventory.invoice.code")}</div>
+							<div>{invoice?.codigo_interno || "—"}</div>
+						</div>
+						<div>
 							<div className="text-sm text-muted-foreground">{t("sys.nav.inventory.invoice.concept")}</div>
-							<div>—</div>
+							<div>{invoice?.concepto || "—"}</div>
 						</div>
 						<div>
 							<div className="text-sm text-muted-foreground">{t("sys.nav.inventory.invoice.movement_date")}</div>
-							<div>—</div>
+							<div>{invoice?.fecha_movimiento ? new Date(invoice.fecha_movimiento).toLocaleDateString() : "—"}</div>
+						</div>
+
+						<div className="col-span-2">
+							<div className="text-sm text-muted-foreground">{t("sys.nav.inventory.invoice.status.index")}</div>
+							<div>
+								{invoice?.estado ? (
+									<Badge variant={invoice.estado === "CONFIRMADA" ? "success" : invoice.estado === "ANULADA" ? "error" : "warning"}>
+										{t(`sys.nav.inventory.invoice.status.${invoice.estado.toLowerCase()}`)}
+									</Badge>
+								) : (
+									"—"
+								)}
+							</div>
 						</div>
 					</div>
 				</CardContent>
@@ -162,10 +196,12 @@ export default function InvoiceDetail() {
 				<CardHeader>
 					<div className="flex items-center justify-between">
 						<div>{t("sys.nav.inventory.invoice.detail.product")}</div>
-						<Button disabled>
-							<Icon icon="solar:add-circle-bold-duotone" className="mr-2" />
-							{t("sys.nav.inventory.invoice.detail.add_product")}
-						</Button>
+						{/* {canWrite && (
+							<Button>
+								<Icon icon="solar:add-circle-bold-duotone" className="mr-2" />
+								{t("sys.nav.inventory.invoice.detail.add_product")}
+							</Button>
+						)} */}
 					</div>
 				</CardHeader>
 				<CardContent>
